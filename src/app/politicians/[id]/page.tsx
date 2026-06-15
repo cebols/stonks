@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabase, type PoliticianSummary, type Trade } from '@/lib/supabase';
-import TradesTable from '@/components/TradesTable';
+import TradesExplorer, { type TradeRow } from '@/components/TradesExplorer';
 import PortfolioCharts from '@/components/PortfolioCharts';
 import PerformanceCurve, { type PerfTrade } from '@/components/PerformanceCurve';
 import Comparator from '@/components/Comparator';
@@ -78,7 +78,7 @@ export default async function PoliticianPage({ params }: { params: { id: string 
       <Comparator politicians={all} initialIds={[summary.id]} />
 
       <h2>Histórico de trades</h2>
-      <TradesTable rows={trades} showPolitician={false} />
+      <TradesExplorer rows={trades.map((t) => ({ ...t, politician: null })) as TradeRow[]} hidePolitician />
     </>
   );
 }

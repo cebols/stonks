@@ -1,8 +1,9 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  LineChart, Line, Legend, CartesianGrid,
 } from 'recharts';
 import type { PoliticianSummary } from '@/lib/supabase';
 import { fmtPct, pctClass } from '@/lib/format';
@@ -10,6 +11,7 @@ import { fmtPct, pctClass } from '@/lib/format';
 const GREEN = '#3fb950';
 const RED = '#f85149';
 const BLUE = '#58a6ff';
+const PALETTE = ['#58a6ff', '#a371f7', '#3fb950', '#e3b341', '#f778ba', '#56d4dd'];
 
 export default function Comparator({
   politicians, initialIds = [], embedded = false,
@@ -34,6 +36,18 @@ export default function Comparator({
       .filter((p) => !ids.includes(p.id) && p.full_name.toLowerCase().includes(needle))
       .slice(0, 8);
   }, [politicians, ids, q]);
+
+  // Curva de performance (carteira de cada político + S&P + CDI), via API.
+  const [curve, setCurve] = useState<Record<string, number | null>[]>([]);
+  useEffect(() => {
+    if (ids.length === 0) { setCurve([]); return; }
+    let alive = true;
+    fetch(`/api/curve?ids=${encodeURIComponent(ids.join(','))}`)
+      .then((r) => r.json())
+      .then((j) => { if (alive) setCurve(j.data ?? []); })
+      .catch(() => { if (alive) setCurve([]); });
+    return () => { alive = false; };
+  }, [ids]);
 
   const alphaData = selected.map((p) => ({ name: p.full_name, alpha: p.avg_alpha ?? 0 }));
   const winData = selected.map((p) => ({ name: p.full_name, win: p.win_rate ?? 0 }));
@@ -99,6 +113,29 @@ export default function Comparator({
               ))}
             </tbody>
           </table>
+
+          <div className="chartbox" style={{ marginTop: 16 }}>
+            <h3>Retorno acumulado das compras vs S&P vs CDI</h3>
+            {curve.length < 2 ? (
+              <p className="muted">Carregando / dados insuficientes para a curva.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={curve} margin={{ left: 8, right: 16 }}>
+                  <CartesianGrid stroke="#1c2230" vertical={false} />
+                  <XAxis dataKey="month" tick={axis} minTickGap={28} />
+                  <YAxis tick={axis} tickFormatter={(v) => `${v}%`} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v}%`} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {selected.map((p, i) => (
+                    <Line key={p.id} type="monotone" dataKey={p.id} name={shortName(p.full_name)}
+                      stroke={PALETTE[i % PALETTE.length]} strokeWidth={2} dot={false} connectNulls />
+                  ))}
+                  <Line type="monotone" dataKey="sp" name="S&P" stroke="#8b95a7" strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
+                  <Line type="monotone" dataKey="cdi" name="CDI" stroke="#f0883e" strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
 
           {selected.length >= 2 && (
             <div className="grid2" style={{ marginTop: 16 }}>

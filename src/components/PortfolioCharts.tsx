@@ -51,7 +51,7 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
       if (t.tx_type === 'sale') row.sell += v; else row.buy += v;
       m.set(month, row);
     }
-    return [...m.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-18);
+    return [...m.values()].sort((a, b) => a.month.localeCompare(b.month));
   }, [scoped]);
 
   // Distribuição por categoria (todas as trades, ignora o filtro).

@@ -14,7 +14,9 @@ export type TradeRow = Trade & {
 
 type Col = 'politician' | 'ticker' | 'tx_type' | 'amount' | 'transaction_date' | 'disclosure_date' | 'disclosure_delay_days';
 
-export default function TradesExplorer({ rows }: { rows: TradeRow[] }) {
+export default function TradesExplorer({
+  rows, hidePolitician = false,
+}: { rows: TradeRow[]; hidePolitician?: boolean }) {
   const [q, setQ] = useState('');
   const [tx, setTx] = useState('');
   const [cat, setCat] = useState<AssetClass | 'all'>('stock');
@@ -64,7 +66,7 @@ export default function TradesExplorer({ rows }: { rows: TradeRow[] }) {
       <table>
         <thead>
           <tr>
-            <SortTh label="Político" col="politician" sort={sort} setSort={setSort} />
+            {!hidePolitician && <SortTh label="Político" col="politician" sort={sort} setSort={setSort} />}
             <SortTh label="Ticker" col="ticker" sort={sort} setSort={setSort} />
             <SortTh label="Tipo" col="tx_type" sort={sort} setSort={setSort} />
             <SortTh label="Valor" col="amount" sort={sort} setSort={setSort} numeric />
@@ -76,11 +78,13 @@ export default function TradesExplorer({ rows }: { rows: TradeRow[] }) {
         <tbody>
           {filtered.map((t) => (
             <tr key={t.id}>
-              <td>
-                {t.politician ? (
-                  <Link href={`/politicians/${t.politician_id}`}>{t.politician.full_name}</Link>
-                ) : t.politician_id}
-              </td>
+              {!hidePolitician && (
+                <td>
+                  {t.politician ? (
+                    <Link href={`/politicians/${t.politician_id}`}>{t.politician.full_name}</Link>
+                  ) : t.politician_id}
+                </td>
+              )}
               <td className="mono">
                 {t.ticker
                   ? <Link href={`/stocks/${t.ticker}`}>{t.ticker}</Link>

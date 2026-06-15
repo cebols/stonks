@@ -76,6 +76,32 @@ export default async function StockPage({ params }: { params: { ticker: string }
         </div>
       </div>
 
+      {(() => {
+        const oldest = perfTrades
+          .filter((t) => t.tx_type === 'purchase' && t.return_pct != null && t.transaction_date)
+          .sort((a, b) => (a.transaction_date! < b.transaction_date! ? -1 : 1))[0];
+        if (!oldest) return null;
+        return (
+          <div className="chartbox">
+            <h3>Resultado desde a compra mais antiga por um político ({oldest.transaction_date})</h3>
+            <div className="cards">
+              <div className="card">
+                <div className={`val ${pctClass(oldest.return_pct)}`}>{fmtPct(oldest.return_pct)}</div>
+                <div className="lbl">retorno do ativo</div>
+              </div>
+              <div className="card">
+                <div className={`val ${pctClass(oldest.benchmark_return_pct)}`}>{fmtPct(oldest.benchmark_return_pct)}</div>
+                <div className="lbl">S&P no período</div>
+              </div>
+              <div className="card">
+                <div className={`val ${pctClass(oldest.cdi_return_pct)}`}>{fmtPct(oldest.cdi_return_pct)}</div>
+                <div className="lbl">CDI no período</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <StockCharts trades={chartTrades} />
       <PerformanceCurve trades={perfTrades} showCategoryFilter={false} />
 
