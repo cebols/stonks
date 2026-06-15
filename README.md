@@ -63,6 +63,9 @@ Next.js (Vercel) lê via Supabase (anon, RLS) <───────────
 ### 1. Supabase
 1. Crie um projeto free em supabase.com.
 2. SQL Editor → cole e rode [`supabase/schema.sql`](supabase/schema.sql).
+   > Este arquivo é a **fonte única** do schema (tabelas, funções e views) e é
+   > idempotente. Sempre que ele mudar, basta recopiar o conteúdo inteiro no
+   > SQL Editor e rodar de novo — pode rodar quantas vezes quiser, sem perder dados.
 3. Settings → API: copie a **URL**, a **anon key** e a **service_role key**.
 
 ### 2. Local
