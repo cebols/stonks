@@ -17,8 +17,7 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://rtjbqcdinhvezzvopitq.supabase.co' }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SENATE_TRADES_URL: ${{ vars.SENATE_TRADES_URL || 'https://raw.githubusercontent.com/timothycarambat/senate-stock-watcher-data/master/aggregate/all_transactions.json' }}
-      HOUSE_TRADES_URL: ${{ vars.HOUSE_TRADES_URL || 'https://raw.githubusercontent.com/pastrosd/Congress-Trades/main/House.json' }}
+      TRADES_URL: ${{ vars.TRADES_URL || 'https://raw.githubusercontent.com/kadoa-org/congress-trading-monitor/main/public/data/trades.json' }}
       PRICE_BENCHMARK_TICKER: ${{ vars.PRICE_BENCHMARK_TICKER || 'SPY' }}
     steps:
       - uses: actions/checkout@v4

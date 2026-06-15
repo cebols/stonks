@@ -1,42 +1,36 @@
 // ============================================================================
 // Ingestão das trades públicas (Câmara + Senado) para o Supabase.
 //
-// Fontes: JSONs públicos já normalizados (STOCK Act / PTRs). As URLs vêm do
-// .env (SENATE_TRADES_URL / HOUSE_TRADES_URL). Os formatos dos dois repos
-// diferem um pouco, então cada um tem seu mapper abaixo.
+// Fonte: kadoa-org/congress-trading-monitor — um único JSON combinado e já
+// normalizado, derivado dos filings oficiais do STOCK Act (House Clerk +
+// Senate EFD). URL configurável via TRADES_URL (aceita lista separada por
+// vírgula, caso queira somar fontes).
 //
 // Rodar: npm run ingest
 // ============================================================================
 import {
-  getServiceClient, slugify, tradeId, parseAmountRange, normalizeTxType,
-  normalizeTicker, toISODate, upsertInChunks, fetchJSON,
+  getServiceClient, slugify, normalizeTxType, normalizeTicker, toISODate,
+  upsertInChunks, fetchJSON,
 } from './lib.mjs';
 
-const SENATE_URL = process.env.SENATE_TRADES_URL;
-const HOUSE_URL = process.env.HOUSE_TRADES_URL;
+const DEFAULT_URL =
+  'https://raw.githubusercontent.com/kadoa-org/congress-trading-monitor/main/public/data/trades.json';
+const TRADES_URLS = (process.env.TRADES_URL || DEFAULT_URL)
+  .split(',').map((u) => u.trim()).filter(Boolean);
 
-// Mapeia um registro bruto -> { politician, trade }. Retorna null se inválido.
-function mapRecord(raw, chamber) {
-  // Os repos usam nomes de campo ligeiramente diferentes; cobrimos os comuns.
-  const name =
-    raw.senator || raw.representative || raw.member || raw.name ||
-    [raw.first_name, raw.last_name].filter(Boolean).join(' ');
+function cleanText(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim() || null;
+}
+
+// Mapeia um registro bruto -> { politician, trade }. Retorna null se inválido
+// ou se não for Câmara/Senado (descarta executivo).
+function mapRecord(raw) {
+  const chamber = String(raw.chamber || '').toLowerCase();
+  if (chamber !== 'house' && chamber !== 'senate') return null;
+
+  const name = raw.filer_name || raw.name;
   if (!name) return null;
-
-  const politicianId = slugify(name);
-  const txDate = toISODate(raw.transaction_date || raw.transactionDate);
-  const discDate = toISODate(
-    raw.disclosure_date || raw.disclosureDate || raw.date_received || raw.report_date
-  );
-  const ticker = normalizeTicker(raw.ticker);
-  const { min, max } = parseAmountRange(raw.amount || raw.amount_range);
-  const txType = normalizeTxType(raw.type || raw.transaction_type);
-  const owner = (raw.owner || 'self').toString().toLowerCase();
-
-  const id = tradeId([
-    politicianId, txDate || '', ticker || raw.asset_description || '', txType || '',
-    raw.amount || '', owner,
-  ]);
+  const politicianId = raw.filer_id || slugify(name);
 
   return {
     politician: {
@@ -47,48 +41,55 @@ function mapRecord(raw, chamber) {
       state: raw.state || null,
     },
     trade: {
-      id,
+      // a fonte já fornece um id único por transação; cai para hash se faltar.
+      id: raw.id || `${politicianId}:${raw.transaction_date}:${raw.ticker}:${raw.row_index ?? ''}`,
       politician_id: politicianId,
-      transaction_date: txDate,
-      disclosure_date: discDate,
-      ticker,
-      asset_description: raw.asset_description || raw.description || null,
-      asset_type: (raw.asset_type || 'stock').toString().toLowerCase(),
-      tx_type: txType,
-      owner,
-      amount_min: min,
-      amount_max: max,
+      transaction_date: toISODate(raw.transaction_date),
+      disclosure_date: toISODate(raw.filing_date || raw.disclosure_date),
+      ticker: normalizeTicker(raw.ticker),
+      asset_description: cleanText(raw.asset_name || raw.asset_description),
+      asset_type: (raw.asset_type || '').toString().toLowerCase() || null,
+      tx_type: normalizeTxType(raw.transaction_type || raw.type),
+      owner: (raw.owner || 'self').toString().toLowerCase(),
+      amount_min: raw.amount_range_low ?? null,
+      amount_max: raw.amount_range_high ?? null,
       raw,
     },
   };
 }
 
-async function loadSource(url, chamber) {
-  if (!url) {
-    console.warn(`⚠️  URL da ${chamber} não configurada — pulando.`);
+async function loadSource(url) {
+  console.log(`→ Baixando: ${url}`);
+  try {
+    const data = await fetchJSON(url);
+    const records = Array.isArray(data) ? data : data.trades || data.transactions || data.data || [];
+    console.log(`  ${records.length} registros brutos`);
+    return records.map(mapRecord).filter(Boolean);
+  } catch (e) {
+    // Uma fonte com problema não deve derrubar a ingestão inteira.
+    console.warn(`  ⚠️  ${e.message} — pulando esta fonte.`);
     return [];
   }
-  console.log(`→ Baixando ${chamber}: ${url}`);
-  const data = await fetchJSON(url);
-  const records = Array.isArray(data) ? data : data.transactions || data.data || [];
-  console.log(`  ${records.length} registros brutos`);
-  return records.map((r) => mapRecord(r, chamber)).filter(Boolean);
 }
 
 async function main() {
   const supabase = getServiceClient();
 
-  const mapped = [
-    ...(await loadSource(SENATE_URL, 'senate')),
-    ...(await loadSource(HOUSE_URL, 'house')),
-  ];
+  const mapped = [];
+  for (const url of TRADES_URLS) mapped.push(...(await loadSource(url)));
 
-  // Dedup de políticos por id.
+  if (mapped.length === 0) {
+    console.error('❌ Nenhum registro válido obtido de nenhuma fonte.');
+    process.exit(1);
+  }
+
+  // Dedup por id.
   const politicians = [...new Map(mapped.map((m) => [m.politician.id, m.politician])).values()];
-  // Dedup de trades por id.
   const trades = [...new Map(mapped.map((m) => [m.trade.id, m.trade])).values()];
 
-  console.log(`\nUpserting ${politicians.length} políticos e ${trades.length} trades...`);
+  const chamberOf = new Map(politicians.map((p) => [p.id, p.chamber]));
+  const byChamber = trades.reduce((a, t) => ((a[chamberOf.get(t.politician_id)]++), a), { house: 0, senate: 0 });
+  console.log(`\nUpserting ${politicians.length} políticos e ${trades.length} trades (house: ${byChamber.house}, senate: ${byChamber.senate})...`);
   await upsertInChunks(supabase, 'politicians', politicians, 'id');
   await upsertInChunks(supabase, 'trades', trades, 'id');
   console.log('✅ Ingestão concluída.');
