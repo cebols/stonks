@@ -61,10 +61,10 @@ select
   count(*) filter (where t.tx_type = 'purchase')                       as purchases,
   count(*) filter (where t.tx_type = 'sale')                           as sales,
   round(sum(amount_mid(t.amount_min, t.amount_max))::numeric, 0)       as est_volume,
-  round(sum(amount_mid(t.amount_min, t.amount_max))
-        filter (where t.tx_type = 'purchase')::numeric, 0)             as buy_volume,
-  round(sum(amount_mid(t.amount_min, t.amount_max))
-        filter (where t.tx_type = 'sale')::numeric, 0)                 as sell_volume,
+  round((sum(amount_mid(t.amount_min, t.amount_max))
+         filter (where t.tx_type = 'purchase'))::numeric, 0)           as buy_volume,
+  round((sum(amount_mid(t.amount_min, t.amount_max))
+         filter (where t.tx_type = 'sale'))::numeric, 0)               as sell_volume,
   count(tp.trade_id)                                                   as scored_trades,
   round(avg(tp.alpha)::numeric, 2)                                     as avg_alpha,
   round((avg(case when tp.is_win then 1 else 0 end) * 100)::numeric, 1) as win_rate,
