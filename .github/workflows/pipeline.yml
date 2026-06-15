@@ -1,7 +1,11 @@
 name: data-pipeline
 
 # Atualiza trades + preços + track record diariamente.
-# Configure os secrets do repo: NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.
+#
+# Único secret obrigatório no repo (Settings → Secrets and variables → Actions):
+#   SUPABASE_SERVICE_ROLE_KEY  — a chave service_role secreta do Supabase.
+# A URL do Supabase e as URLs das fontes têm default abaixo; sobrescreva-as
+# criando repo Variables de mesmo nome se um dia mudarem.
 on:
   schedule:
     - cron: '0 9 * * *' # 09:00 UTC todo dia
@@ -11,10 +15,10 @@ jobs:
   pipeline:
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://rtjbqcdinhvezzvopitq.supabase.co' }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      SENATE_TRADES_URL: ${{ vars.SENATE_TRADES_URL }}
-      HOUSE_TRADES_URL: ${{ vars.HOUSE_TRADES_URL }}
+      SENATE_TRADES_URL: ${{ vars.SENATE_TRADES_URL || 'https://raw.githubusercontent.com/timothycarambat/senate-stock-watcher-data/master/aggregate/all_transactions.json' }}
+      HOUSE_TRADES_URL: ${{ vars.HOUSE_TRADES_URL || 'https://raw.githubusercontent.com/pastrosd/Congress-Trades/main/House.json' }}
       PRICE_BENCHMARK_TICKER: ${{ vars.PRICE_BENCHMARK_TICKER || 'SPY' }}
     steps:
       - uses: actions/checkout@v4
