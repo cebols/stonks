@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { supabase, type Politician } from '@/lib/supabase';
 import { partyLabel } from '@/lib/format';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 async function getPoliticians(): Promise<Politician[]> {
   const { data, error } = await supabase

@@ -1,7 +1,7 @@
 import { supabase, type Trade } from '@/lib/supabase';
 import TradesTable from '@/components/TradesTable';
 
-export const revalidate = 3600; // revalida de hora em hora
+export const dynamic = 'force-dynamic'; // SSR a cada request (dados sempre frescos)
 
 type Row = Trade & { politician: { full_name: string; chamber: string; party: string | null } | null };
 

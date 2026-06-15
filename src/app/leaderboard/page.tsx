@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { supabase, type TrackRecord } from '@/lib/supabase';
 import { fmtPct, pctClass, partyLabel } from '@/lib/format';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 async function getLeaderboard(): Promise<TrackRecord[]> {
   const { data, error } = await supabase

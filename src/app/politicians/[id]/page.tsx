@@ -3,7 +3,7 @@ import { supabase, type Politician, type Trade, type TrackRecord } from '@/lib/s
 import TradesTable from '@/components/TradesTable';
 import { fmtPct, pctClass, partyLabel } from '@/lib/format';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 async function getData(id: string) {
   const [pol, trades, record] = await Promise.all([
