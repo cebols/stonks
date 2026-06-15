@@ -15,7 +15,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="inner">
             <h1>📈 Stonks</h1>
             <nav>
-              <Link href="/">Trades</Link>
+              <Link href="/">Home</Link>
+              <Link href="/trades">Trades</Link>
               <Link href="/stocks">Ações</Link>
               <Link href="/politicians">Políticos</Link>
               <Link href="/leaderboard">Leaderboard</Link>

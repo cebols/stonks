@@ -2,20 +2,12 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { TickerSummary } from '@/lib/supabase';
-import { fmtPct, pctClass } from '@/lib/format';
+import { fmtPct, pctClass, fmtMoney } from '@/lib/format';
 import { Toolbar, TextFilter, SelectFilter, SortTh, compareBy, Sort } from './controls';
 
 type Col =
   | 'ticker' | 'trade_count' | 'filer_count' | 'purchases' | 'sales'
   | 'buy_volume' | 'sell_volume' | 'est_volume' | 'avg_alpha' | 'win_rate' | 'last_traded';
-
-function fmtMoney(n: number | null): string {
-  if (n == null) return '—';
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
-}
 
 export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
   const [q, setQ] = useState('');
@@ -82,5 +74,3 @@ export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
     </>
   );
 }
-
-export { fmtMoney };

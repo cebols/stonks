@@ -2,8 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabase, type TickerSummary } from '@/lib/supabase';
 import StockCharts, { type StockTrade } from '@/components/StockCharts';
-import { fmtAmount, fmtDate, fmtPct, pctClass, partyLabel } from '@/lib/format';
-import { fmtMoney } from '@/components/StocksExplorer';
+import { fmtAmount, fmtDate, fmtPct, pctClass, fmtMoney } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +76,6 @@ export default async function StockPage({ params }: { params: { ticker: string }
             <tr key={t.id}>
               <td>
                 <Link href={`/politicians/${t.politician_id}`}>{t.politician?.full_name ?? t.politician_id}</Link>
-                {t.politician?.party && <span className="muted"> · {partyLabel(t.politician.party)}</span>}
               </td>
               <td className={t.tx_type === 'purchase' ? 'buy' : t.tx_type === 'sale' ? 'sell' : ''}>
                 {t.tx_type === 'purchase' ? 'Compra' : t.tx_type === 'sale' ? 'Venda' : t.tx_type ?? '—'}
