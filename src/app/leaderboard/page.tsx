@@ -1,21 +1,19 @@
-import Link from 'next/link';
-import { getSupabase, type TrackRecord } from '@/lib/supabase';
-import { fmtPct, pctClass, partyLabel } from '@/lib/format';
+import { getSupabase, type PoliticianSummary } from '@/lib/supabase';
+import PoliticiansExplorer from '@/components/PoliticiansExplorer';
 
 export const dynamic = 'force-dynamic';
 
-async function getLeaderboard(): Promise<TrackRecord[]> {
+async function getLeaderboard(): Promise<PoliticianSummary[]> {
   const { data, error } = await getSupabase()
-    .from('politician_track_record')
+    .from('politician_summary')
     .select('*')
-    .gte('scored_trades', 5) // ignora amostras pequenas demais p/ ter significado
-    .order('avg_alpha', { ascending: false })
-    .limit(50);
+    .gte('scored_trades', 5) // amostra mínima para ter significado
+    .order('avg_alpha', { ascending: false });
   if (error) {
     console.error(error.message);
     return [];
   }
-  return (data ?? []) as TrackRecord[];
+  return (data ?? []) as PoliticianSummary[];
 }
 
 export default async function LeaderboardPage() {
@@ -24,36 +22,11 @@ export default async function LeaderboardPage() {
     <>
       <h2>Leaderboard — track record agregado</h2>
       <p className="muted">
-        Alpha médio e win rate de <strong>todas</strong> as trades pontuadas (mín. 5), não só as vencedoras.
-        Alpha = retorno do ativo menos o S&P no mesmo período, com sinal ajustado para vendas.
-        É uma estimativa: a lei só divulga faixas de valor e há atraso na divulgação.
+        Alpha médio e win rate de <strong>todas</strong> as trades pontuadas (mín. 5), não só as
+        vencedoras. Alpha = excesso de retorno do ativo vs benchmark, com sinal ajustado para vendas.
+        É estimativa: a lei só divulga faixas de valor e há atraso na divulgação.
       </p>
-      {!rows.length ? (
-        <p className="muted">Sem dados ainda. Rode <code>npm run pipeline</code>.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Político</th><th>Câmara</th><th>Partido</th>
-              <th>Trades</th><th>Win rate</th><th>Alpha médio</th><th>Delay médio</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id}>
-                <td className="muted mono">{i + 1}</td>
-                <td><Link href={`/politicians/${r.id}`}>{r.full_name}</Link></td>
-                <td>{r.chamber === 'senate' ? 'Senado' : 'Câmara'}</td>
-                <td>{partyLabel(r.party)}</td>
-                <td className="mono">{r.scored_trades}</td>
-                <td className="mono">{r.win_rate != null ? `${r.win_rate}%` : '—'}</td>
-                <td className={`mono ${pctClass(r.avg_alpha)}`}>{fmtPct(r.avg_alpha)}</td>
-                <td className="mono">{r.avg_disclosure_delay_days != null ? `${r.avg_disclosure_delay_days}d` : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <PoliticiansExplorer rows={rows} initialSort={{ key: 'avg_alpha', dir: 'desc' }} />
     </>
   );
 }

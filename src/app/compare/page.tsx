@@ -1,5 +1,5 @@
 import { getSupabase, type PoliticianSummary } from '@/lib/supabase';
-import PoliticiansExplorer from '@/components/PoliticiansExplorer';
+import Comparator from '@/components/Comparator';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,7 +7,8 @@ async function getPoliticians(): Promise<PoliticianSummary[]> {
   const { data, error } = await getSupabase()
     .from('politician_summary')
     .select('*')
-    .order('total_trades', { ascending: false });
+    .gte('scored_trades', 1)
+    .order('full_name', { ascending: true });
   if (error) {
     console.error(error.message);
     return [];
@@ -15,16 +16,16 @@ async function getPoliticians(): Promise<PoliticianSummary[]> {
   return (data ?? []) as PoliticianSummary[];
 }
 
-export default async function PoliticiansPage() {
-  const rows = await getPoliticians();
+export default async function ComparePage() {
+  const politicians = await getPoliticians();
   return (
     <>
-      <h2>Políticos</h2>
+      <h2>Comparador de políticos</h2>
       <p className="muted">
-        Filtre e ordene por volume de trades, alpha médio ou win rate. Clique num nome para ver a
-        carteira e o histórico. <a href="/compare">Comparar políticos →</a>
+        Compare lado a lado o track record (alpha, win rate, delay) de quaisquer políticos.
+        Adicione pelo menos dois.
       </p>
-      <PoliticiansExplorer rows={rows} />
+      <Comparator politicians={politicians} />
     </>
   );
 }

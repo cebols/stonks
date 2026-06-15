@@ -54,3 +54,34 @@ export type TrackRecord = {
   win_rate: number | null;
   avg_disclosure_delay_days: number | null;
 };
+
+export type PoliticianSummary = {
+  id: string;
+  full_name: string;
+  chamber: 'house' | 'senate';
+  party: string | null;
+  state: string | null;
+  total_trades: number;
+  stock_trades: number;
+  scored_trades: number;
+  avg_alpha: number | null;
+  win_rate: number | null;
+  avg_disclosure_delay_days: number | null;
+  last_traded: string | null;
+};
+
+export type TickerSummary = {
+  ticker: string;
+  asset_description: string | null;
+  trade_count: number;
+  filer_count: number;
+  purchases: number;
+  sales: number;
+  est_volume: number | null;
+  buy_volume: number | null;
+  sell_volume: number | null;
+  scored_trades: number;
+  avg_alpha: number | null;
+  win_rate: number | null;
+  last_traded: string | null;
+};

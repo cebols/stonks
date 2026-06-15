@@ -1,33 +1,32 @@
 import { getSupabase, type Trade } from '@/lib/supabase';
-import TradesTable from '@/components/TradesTable';
+import TradesExplorer, { type TradeRow } from '@/components/TradesExplorer';
 
 export const dynamic = 'force-dynamic'; // SSR a cada request (dados sempre frescos)
 
-type Row = Trade & { politician: { full_name: string; chamber: string; party: string | null } | null };
-
-async function getRecentTrades(): Promise<Row[]> {
+async function getRecentTrades(): Promise<TradeRow[]> {
   const { data, error } = await getSupabase()
     .from('trades')
     .select('*, politician:politicians(full_name, chamber, party)')
     .order('transaction_date', { ascending: false, nullsFirst: false })
-    .limit(100);
+    .limit(1500);
   if (error) {
     console.error(error.message);
     return [];
   }
-  return (data ?? []) as unknown as Row[];
+  return (data ?? []) as unknown as TradeRow[];
 }
 
 export default async function HomePage() {
   const rows = await getRecentTrades();
   return (
     <>
-      <h2>Trades mais recentes</h2>
+      <h2>Trades recentes</h2>
       <p className="muted">
-        100 transações mais recentes divulgadas sob o STOCK Act. A coluna <strong>Delay</strong> mostra
-        quantos dias se passaram entre a transação e a divulgação — quanto maior, menos útil como sinal.
+        Últimas {rows.length} transações divulgadas sob o STOCK Act. Filtre por categoria, câmara,
+        partido ou tipo, e ordene por qualquer coluna. <strong>Delay</strong> = dias entre a
+        transação e a divulgação (quanto maior, menos útil como sinal).
       </p>
-      <TradesTable rows={rows} />
+      <TradesExplorer rows={rows} />
     </>
   );
 }

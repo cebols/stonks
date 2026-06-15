@@ -15,9 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="inner">
             <h1>📈 Stonks</h1>
             <nav>
-              <Link href="/">Trades recentes</Link>
+              <Link href="/">Trades</Link>
+              <Link href="/stocks">Ações</Link>
               <Link href="/politicians">Políticos</Link>
               <Link href="/leaderboard">Leaderboard</Link>
+              <Link href="/compare">Comparar</Link>
             </nav>
           </div>
         </header>
