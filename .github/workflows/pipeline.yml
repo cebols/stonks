@@ -1,0 +1,31 @@
+name: data-pipeline
+
+# Atualiza trades + preços + track record diariamente.
+# Configure os secrets do repo: NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY.
+on:
+  schedule:
+    - cron: '0 9 * * *' # 09:00 UTC todo dia
+  workflow_dispatch: {}   # permite rodar manualmente pela aba Actions
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SENATE_TRADES_URL: ${{ vars.SENATE_TRADES_URL }}
+      HOUSE_TRADES_URL: ${{ vars.HOUSE_TRADES_URL }}
+      PRICE_BENCHMARK_TICKER: ${{ vars.PRICE_BENCHMARK_TICKER || 'SPY' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install --no-audit --no-fund
+      - name: Ingest trades
+        run: npm run ingest
+      - name: Fetch prices
+        run: npm run fetch-prices
+      - name: Compute performance
+        run: npm run compute-performance
