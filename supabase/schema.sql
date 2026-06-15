@@ -131,6 +131,10 @@ end $$;
 -- Editor sempre que o schema mudar.
 -- ============================================================================
 
+-- Retorno do CDI (Brasil) acumulado da data da trade até hoje — referência de
+-- "risk-free brasileiro". Preenchido pelo ingest (fonte: API do Banco Central).
+alter table trade_performance add column if not exists cdi_return_pct numeric;
+
 -- Classificação de ativo a partir do código do disclosure (House/Senate).
 -- stock = ações; fund = fundos (ETF/mútuo/hedge/anuidade); other = bonds,
 -- títulos públicos/municipais, opções, etc. (ou sem ticker).

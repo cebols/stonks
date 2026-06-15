@@ -12,7 +12,7 @@
 // ============================================================================
 import {
   getServiceClient, slugify, normalizeTxType, normalizeTicker, toISODate,
-  upsertInChunks, fetchJSON,
+  upsertInChunks, fetchJSON, fetchCDIIndex, cdiReturnSince,
 } from './lib.mjs';
 
 const DEFAULT_URL =
@@ -110,6 +110,20 @@ async function main() {
   const perf = [...new Map(
     mapped.filter((m) => m.perf).map((m) => [m.perf.trade_id, m.perf])
   ).values()];
+
+  // CDI (Banco Central) por trade: retorno acumulado da data da trade até hoje.
+  try {
+    const cdi = await fetchCDIIndex();
+    const dateById = new Map(trades.map((t) => [t.id, t.transaction_date]));
+    let n = 0;
+    for (const row of perf) {
+      const r = cdiReturnSince(cdi, dateById.get(row.trade_id));
+      if (r != null) { row.cdi_return_pct = round2(r); n++; }
+    }
+    console.log(`→ CDI aplicado a ${n} performances (série BCB com ${cdi.length} pontos).`);
+  } catch (e) {
+    console.warn(`⚠️  CDI indisponível (${e.message}) — seguindo sem CDI.`);
+  }
 
   const chamberOf = new Map(politicians.map((p) => [p.id, p.chamber]));
   const byChamber = trades.reduce((a, t) => ((a[chamberOf.get(t.politician_id)]++), a), { house: 0, senate: 0 });

@@ -90,3 +90,50 @@ export async function fetchJSON(url) {
   if (!res.ok) throw new Error(`Falha ao buscar ${url}: HTTP ${res.status}`);
   return res.json();
 }
+
+// Série diária do CDI (Banco Central — SGS 12), como índice acumulado.
+// Retorna [{ date: 'YYYY-MM-DD', cum }] em ordem crescente. cum = fator
+// acumulado (produto de 1 + taxa_diária). Gratuito, sem chave.
+export async function fetchCDIIndex(startISO = '2012-01-01') {
+  const startYear = Number(startISO.slice(0, 4));
+  const nowYear = new Date().getUTCFullYear();
+  const base = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados';
+  const seen = new Map(); // dataISO -> valor (dedup entre janelas)
+
+  // A API limita cada request a ~10 anos; buscamos em janelas de 9 anos.
+  for (let y = startYear; y <= nowYear; y += 9) {
+    const end = Math.min(y + 9, nowYear);
+    const url = `${base}?formato=json&dataInicial=01/01/${y}&dataFinal=31/12/${end}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) continue;
+    for (const r of await res.json()) {
+      const [dd, mm, yy] = String(r.data).split('/');
+      const v = Number(r.valor);
+      if (dd && Number.isFinite(v)) seen.set(`${yy}-${mm}-${dd}`, v);
+    }
+    if (end >= nowYear) break;
+  }
+
+  const out = [];
+  let cum = 1;
+  for (const date of [...seen.keys()].sort()) {
+    cum *= 1 + seen.get(date) / 100;
+    out.push({ date, cum });
+  }
+  if (out.length === 0) throw new Error('série CDI vazia');
+  return out;
+}
+
+// Retorno % do CDI acumulado da data `fromISO` até o fim da série (≈ hoje).
+export function cdiReturnSince(index, fromISO) {
+  if (!index || index.length === 0 || !fromISO) return null;
+  const last = index[index.length - 1].cum;
+  // busca binária: último ponto com date <= fromISO.
+  let lo = 0, hi = index.length - 1, pos = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (index[mid].date <= fromISO) { pos = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  const base = pos >= 0 ? index[pos].cum : index[0].cum;
+  return (last / base - 1) * 100;
+}

@@ -2,15 +2,18 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabase, type TickerSummary } from '@/lib/supabase';
 import StockCharts, { type StockTrade } from '@/components/StockCharts';
+import PerformanceCurve, { type PerfTrade } from '@/components/PerformanceCurve';
 import { fmtAmount, fmtDate, fmtPct, pctClass, fmtMoney } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
+type PerfEmbed = { return_pct: number | null; benchmark_return_pct: number | null; cdi_return_pct: number | null };
 type Row = {
-  id: string; politician_id: string; tx_type: string | null;
-  amount_min: number | null; amount_max: number | null;
+  id: string; politician_id: string; ticker: string | null; asset_type: string | null;
+  tx_type: string | null; amount_min: number | null; amount_max: number | null;
   transaction_date: string | null; disclosure_date: string | null;
-  politician: { full_name: string; party: string | null; chamber: string } | null;
+  politician: { full_name: string } | null;
+  perf: PerfEmbed | PerfEmbed[] | null;
 };
 
 async function getData(ticker: string) {
@@ -18,7 +21,7 @@ async function getData(ticker: string) {
   const [summary, trades] = await Promise.all([
     supabase.from('ticker_summary').select('*').eq('ticker', ticker).maybeSingle(),
     supabase.from('trades')
-      .select('id, politician_id, tx_type, amount_min, amount_max, transaction_date, disclosure_date, politician:politicians(full_name, party, chamber)')
+      .select('id, politician_id, ticker, asset_type, tx_type, amount_min, amount_max, transaction_date, disclosure_date, politician:politicians(full_name), perf:trade_performance(return_pct, benchmark_return_pct, cdi_return_pct)')
       .eq('ticker', ticker)
       .order('transaction_date', { ascending: false, nullsFirst: false })
       .limit(1000),
@@ -38,6 +41,15 @@ export default async function StockPage({ params }: { params: { ticker: string }
     tx_type: t.tx_type, amount_min: t.amount_min, amount_max: t.amount_max,
     transaction_date: t.transaction_date, politician_name: t.politician?.full_name ?? t.politician_id,
   }));
+  const perfTrades: PerfTrade[] = trades.map((t) => {
+    const p = Array.isArray(t.perf) ? t.perf[0] : t.perf;
+    return {
+      ticker: t.ticker, asset_type: t.asset_type, tx_type: t.tx_type,
+      transaction_date: t.transaction_date, amount_min: t.amount_min, amount_max: t.amount_max,
+      return_pct: p?.return_pct ?? null, benchmark_return_pct: p?.benchmark_return_pct ?? null,
+      cdi_return_pct: p?.cdi_return_pct ?? null,
+    };
+  });
 
   return (
     <>
@@ -65,6 +77,7 @@ export default async function StockPage({ params }: { params: { ticker: string }
       </div>
 
       <StockCharts trades={chartTrades} />
+      <PerformanceCurve trades={perfTrades} showCategoryFilter={false} />
 
       <h2>Trades neste ativo</h2>
       <table>
