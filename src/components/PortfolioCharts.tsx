@@ -6,7 +6,8 @@ import {
 } from 'recharts';
 import type { Trade } from '@/lib/supabase';
 import { assetClass, amountMid, AssetClass, CATEGORY_LABELS } from '@/lib/assetClass';
-import { Segmented } from './controls';
+import { Range, withinRange } from '@/lib/range';
+import { Segmented, RangeSelect } from './controls';
 
 const GREEN = '#3fb950';
 const RED = '#f85149';
@@ -21,10 +22,15 @@ function money(n: number): string {
 
 export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
   const [cat, setCat] = useState<AssetClass | 'all'>('stock');
+  const [range, setRange] = useState<Range>('all');
 
+  const ranged = useMemo(
+    () => trades.filter((t) => withinRange(t.transaction_date, range)),
+    [trades, range],
+  );
   const scoped = useMemo(
-    () => trades.filter((t) => cat === 'all' || assetClass(t.asset_type, t.ticker) === cat),
-    [trades, cat],
+    () => ranged.filter((t) => cat === 'all' || assetClass(t.asset_type, t.ticker) === cat),
+    [ranged, cat],
   );
 
   // Top tickers por volume estimado (compra + venda).
@@ -57,12 +63,12 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
   // Distribuição por categoria (todas as trades, ignora o filtro).
   const byCategory = useMemo(() => {
     const m = new Map<AssetClass, number>();
-    for (const t of trades) {
+    for (const t of ranged) {
       const c = assetClass(t.asset_type, t.ticker);
       m.set(c, (m.get(c) ?? 0) + amountMid(t.amount_min, t.amount_max));
     }
     return [...m.entries()].map(([k, v]) => ({ name: CATEGORY_LABELS[k], value: Math.round(v) }));
-  }, [trades]);
+  }, [ranged]);
 
   const axis = { fontSize: 11, fill: '#8b95a7' };
   const tooltipStyle = { background: '#131825', border: '1px solid #232a3b', borderRadius: 8, fontSize: 12 };
@@ -80,6 +86,7 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
             { value: 'all', label: 'Todos' },
           ]}
         />
+        <RangeSelect value={range} onChange={setRange} />
       </div>
 
       <div className="grid2">

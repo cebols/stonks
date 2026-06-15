@@ -7,6 +7,8 @@ import {
 } from 'recharts';
 import type { PoliticianSummary } from '@/lib/supabase';
 import { fmtPct, pctClass } from '@/lib/format';
+import { Range } from '@/lib/range';
+import { RangeSelect } from './controls';
 
 const GREEN = '#3fb950';
 const RED = '#f85149';
@@ -39,15 +41,16 @@ export default function Comparator({
 
   // Curva de performance (carteira de cada político + S&P + CDI), via API.
   const [curve, setCurve] = useState<Record<string, number | null>[]>([]);
+  const [range, setRange] = useState<Range>('all');
   useEffect(() => {
     if (ids.length === 0) { setCurve([]); return; }
     let alive = true;
-    fetch(`/api/curve?ids=${encodeURIComponent(ids.join(','))}`)
+    fetch(`/api/curve?ids=${encodeURIComponent(ids.join(','))}&range=${range}`)
       .then((r) => r.json())
       .then((j) => { if (alive) setCurve(j.data ?? []); })
       .catch(() => { if (alive) setCurve([]); });
     return () => { alive = false; };
-  }, [ids]);
+  }, [ids, range]);
 
   const alphaData = selected.map((p) => ({ name: p.full_name, alpha: p.avg_alpha ?? 0 }));
   const winData = selected.map((p) => ({ name: p.full_name, win: p.win_rate ?? 0 }));
@@ -116,6 +119,9 @@ export default function Comparator({
 
           <div className="chartbox" style={{ marginTop: 16 }}>
             <h3>Retorno acumulado das compras vs S&P vs CDI</h3>
+            <div className="toolbar" style={{ margin: '0 0 8px' }}>
+              <RangeSelect value={range} onChange={setRange} />
+            </div>
             {curve.length < 2 ? (
               <p className="muted">Carregando / dados insuficientes para a curva.</p>
             ) : (

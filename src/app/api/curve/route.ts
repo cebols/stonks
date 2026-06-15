@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
+import { cutoffISO, Range } from '@/lib/range';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,16 +33,20 @@ function cumulativeByMonth(rows: Row[], fn: (p: PerfEmbed) => number | null): Ma
 }
 
 export async function GET(req: Request) {
-  const ids = (new URL(req.url).searchParams.get('ids') ?? '')
+  const params = new URL(req.url).searchParams;
+  const ids = (params.get('ids') ?? '')
     .split(',').map((s) => s.trim()).filter(Boolean).slice(0, 6);
   if (ids.length === 0) return NextResponse.json({ data: [], series: [] });
+  const cutoff = cutoffISO((params.get('range') as Range) ?? 'all');
 
-  const { data, error } = await getSupabase()
+  let query = getSupabase()
     .from('trades')
     .select('politician_id, transaction_date, tx_type, amount_min, amount_max, perf:trade_performance(return_pct, benchmark_return_pct, cdi_return_pct)')
     .in('politician_id', ids)
     .eq('tx_type', 'purchase')
     .limit(3000);
+  if (cutoff) query = query.gte('transaction_date', cutoff);
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const rows = (data ?? []) as unknown as Row[];

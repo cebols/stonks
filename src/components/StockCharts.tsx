@@ -1,9 +1,11 @@
 'use client';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell,
 } from 'recharts';
 import { amountMid } from '@/lib/assetClass';
+import { Range, withinRange } from '@/lib/range';
+import { RangeSelect } from './controls';
 
 const GREEN = '#3fb950';
 const RED = '#f85149';
@@ -24,18 +26,24 @@ export type StockTrade = {
 };
 
 export default function StockCharts({ trades }: { trades: StockTrade[] }) {
+  const [range, setRange] = useState<Range>('all');
+  const ranged = useMemo(
+    () => trades.filter((t) => withinRange(t.transaction_date, range)),
+    [trades, range],
+  );
+
   const topPols = useMemo(() => {
     const m = new Map<string, number>();
-    for (const t of trades) {
+    for (const t of ranged) {
       m.set(t.politician_name, (m.get(t.politician_name) ?? 0) + amountMid(t.amount_min, t.amount_max));
     }
     return [...m.entries()].map(([name, vol]) => ({ name, vol }))
       .sort((a, b) => b.vol - a.vol).slice(0, 10);
-  }, [trades]);
+  }, [ranged]);
 
   const byMonth = useMemo(() => {
     const m = new Map<string, { month: string; buy: number; sell: number }>();
-    for (const t of trades) {
+    for (const t of ranged) {
       if (!t.transaction_date) continue;
       const month = t.transaction_date.slice(0, 7);
       const row = m.get(month) ?? { month, buy: 0, sell: 0 };
@@ -44,12 +52,14 @@ export default function StockCharts({ trades }: { trades: StockTrade[] }) {
       m.set(month, row);
     }
     return [...m.values()].sort((a, b) => a.month.localeCompare(b.month));
-  }, [trades]);
+  }, [ranged]);
 
   const axis = { fontSize: 11, fill: '#8b95a7' };
   const tooltipStyle = { background: '#131825', border: '1px solid #232a3b', borderRadius: 8, fontSize: 12 };
 
   return (
+    <>
+    <div className="toolbar"><RangeSelect value={range} onChange={setRange} /></div>
     <div className="grid2">
       <div className="chartbox">
         <h3>Maiores posições por político (volume estimado)</h3>
@@ -78,5 +88,6 @@ export default function StockCharts({ trades }: { trades: StockTrade[] }) {
         </ResponsiveContainer>
       </div>
     </div>
+    </>
   );
 }

@@ -4,7 +4,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
 } from 'recharts';
 import { assetClass, amountMid, AssetClass } from '@/lib/assetClass';
-import { Segmented } from './controls';
+import { Range, withinRange } from '@/lib/range';
+import { Segmented, RangeSelect } from './controls';
 
 export type PerfTrade = {
   ticker: string | null;
@@ -24,6 +25,7 @@ export default function PerformanceCurve({
   trades, showCategoryFilter = true,
 }: { trades: PerfTrade[]; showCategoryFilter?: boolean }) {
   const [cat, setCat] = useState<AssetClass | 'all'>('stock');
+  const [range, setRange] = useState<Range>('all');
 
   const data = useMemo(() => {
     const buys = trades
@@ -31,6 +33,7 @@ export default function PerformanceCurve({
         t.tx_type === 'purchase' &&
         t.transaction_date &&
         t.return_pct != null &&
+        withinRange(t.transaction_date, range) &&
         (!showCategoryFilter || cat === 'all' || assetClass(t.asset_type, t.ticker) === cat))
       .sort((a, b) => (a.transaction_date! < b.transaction_date! ? -1 : 1));
 
@@ -51,7 +54,7 @@ export default function PerformanceCurve({
       });
     }
     return [...byMonth.values()];
-  }, [trades, cat, showCategoryFilter]);
+  }, [trades, cat, range, showCategoryFilter]);
 
   const axis = { fontSize: 11, fill: '#8b95a7' };
   const tooltipStyle = { background: '#131825', border: '1px solid #232a3b', borderRadius: 8, fontSize: 12 };
@@ -59,8 +62,8 @@ export default function PerformanceCurve({
   return (
     <div className="chartbox">
       <h3>Retorno acumulado das compras (medido até hoje) vs benchmark vs CDI</h3>
-      {showCategoryFilter && (
-        <div className="toolbar" style={{ margin: '0 0 8px' }}>
+      <div className="toolbar" style={{ margin: '0 0 8px' }}>
+        {showCategoryFilter && (
           <Segmented
             value={cat} onChange={setCat}
             options={[
@@ -69,8 +72,9 @@ export default function PerformanceCurve({
               { value: 'all', label: 'Todos' },
             ]}
           />
-        </div>
-      )}
+        )}
+        <RangeSelect value={range} onChange={setRange} />
+      </div>
       {data.length < 2 ? (
         <p className="muted">Dados insuficientes para a curva nesta categoria.</p>
       ) : (

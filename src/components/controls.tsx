@@ -1,5 +1,6 @@
 'use client';
 import { ReactNode } from 'react';
+import { Range, RANGE_OPTIONS } from '@/lib/range';
 
 export type SortDir = 'asc' | 'desc';
 export type Sort<K extends string> = { key: K; dir: SortDir };
@@ -60,6 +61,18 @@ export function Segmented<T extends string>({
         </button>
       ))}
     </div>
+  );
+}
+
+// Seletor de janela de tempo (Período) para os gráficos.
+export function RangeSelect({ value, onChange }: { value: Range; onChange: (v: Range) => void }) {
+  return (
+    <label>
+      Período
+      <select value={value} onChange={(e) => onChange(e.target.value as Range)}>
+        {RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
   );
 }
 
