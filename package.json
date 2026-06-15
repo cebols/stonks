@@ -10,9 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "ingest": "node scripts/ingest.mjs",
-    "fetch-prices": "node scripts/fetch-prices.mjs",
-    "compute-performance": "node scripts/compute-performance.mjs",
-    "pipeline": "node scripts/ingest.mjs && node scripts/fetch-prices.mjs && node scripts/compute-performance.mjs"
+    "pipeline": "node scripts/ingest.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

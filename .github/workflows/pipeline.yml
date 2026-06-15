@@ -1,6 +1,6 @@
 name: data-pipeline
 
-# Atualiza trades + preços + track record diariamente.
+# Atualiza trades + track record (retorno/alpha) diariamente.
 #
 # Único secret obrigatório no repo (Settings → Secrets and variables → Actions):
 #   SUPABASE_SERVICE_ROLE_KEY  — a chave service_role secreta do Supabase.
@@ -18,7 +18,6 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL || 'https://rtjbqcdinhvezzvopitq.supabase.co' }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       TRADES_URL: ${{ vars.TRADES_URL || 'https://raw.githubusercontent.com/kadoa-org/congress-trading-monitor/main/public/data/trades.json' }}
-      PRICE_BENCHMARK_TICKER: ${{ vars.PRICE_BENCHMARK_TICKER || 'SPY' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,9 +25,5 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm install --no-audit --no-fund
-      - name: Ingest trades
+      - name: Ingest trades + performance
         run: npm run ingest
-      - name: Fetch prices
-        run: npm run fetch-prices
-      - name: Compute performance
-        run: npm run compute-performance
