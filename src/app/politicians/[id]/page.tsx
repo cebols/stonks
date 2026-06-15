@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation';
-import { supabase, type Politician, type Trade, type TrackRecord } from '@/lib/supabase';
+import { getSupabase, type Politician, type Trade, type TrackRecord } from '@/lib/supabase';
 import TradesTable from '@/components/TradesTable';
 import { fmtPct, pctClass, partyLabel } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 async function getData(id: string) {
+  const supabase = getSupabase();
   const [pol, trades, record] = await Promise.all([
     supabase.from('politicians').select('*').eq('id', id).single(),
     supabase.from('trades').select('*').eq('politician_id', id)

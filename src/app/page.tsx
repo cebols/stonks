@@ -1,4 +1,4 @@
-import { supabase, type Trade } from '@/lib/supabase';
+import { getSupabase, type Trade } from '@/lib/supabase';
 import TradesTable from '@/components/TradesTable';
 
 export const dynamic = 'force-dynamic'; // SSR a cada request (dados sempre frescos)
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'; // SSR a cada request (dados sempre fres
 type Row = Trade & { politician: { full_name: string; chamber: string; party: string | null } | null };
 
 async function getRecentTrades(): Promise<Row[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('trades')
     .select('*, politician:politicians(full_name, chamber, party)')
     .order('transaction_date', { ascending: false, nullsFirst: false })

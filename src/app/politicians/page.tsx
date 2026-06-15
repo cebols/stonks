@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { supabase, type Politician } from '@/lib/supabase';
+import { getSupabase, type Politician } from '@/lib/supabase';
 import { partyLabel } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 async function getPoliticians(): Promise<Politician[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('politicians')
     .select('*')
     .order('full_name', { ascending: true });

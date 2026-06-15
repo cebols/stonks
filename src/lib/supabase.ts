@@ -3,14 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 // Client de leitura (browser/server components). Usa a chave anon — só SELECT,
 // protegido por RLS no banco. A escrita acontece só nos scripts (service role).
 //
-// Fallbacks evitam que o `next build` quebre quando as env vars ainda não foram
-// configuradas: nesse caso as queries falham e as páginas mostram estado vazio.
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321';
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'anon-key-not-set';
+// IMPORTANTE: o client é criado de forma PREGUIÇOSA (lazy). Se construíssemos no
+// topo do módulo, o simples `import` desta lib durante o `next build` (etapa
+// "Collecting page data") já tentaria instanciar o client e quebraria com
+// "supabaseKey is required" quando as env vars não estão presentes no build.
+// Criando sob demanda, o build nunca precisa das chaves — só o runtime (SSR).
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const supabase = createClient(url, anonKey, {
-  auth: { persistSession: false },
-});
+let _client: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (_client) return _client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://localhost:54321';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'anon-key-not-set';
+  _client = createClient(url, anonKey, { auth: { persistSession: false } });
+  return _client;
+}
 
 export type Trade = {
   id: string;

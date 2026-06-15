@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { supabase, type TrackRecord } from '@/lib/supabase';
+import { getSupabase, type TrackRecord } from '@/lib/supabase';
 import { fmtPct, pctClass, partyLabel } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
 async function getLeaderboard(): Promise<TrackRecord[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('politician_track_record')
     .select('*')
     .gte('scored_trades', 5) // ignora amostras pequenas demais p/ ter significado
