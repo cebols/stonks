@@ -189,6 +189,10 @@ select
          filter (where t.tx_type = 'purchase'))::numeric, 0)           as buy_volume,
   round((sum(amount_mid(t.amount_min, t.amount_max))
          filter (where t.tx_type = 'sale'))::numeric, 0)               as sell_volume,
+  round((coalesce(sum(amount_mid(t.amount_min, t.amount_max))
+            filter (where t.tx_type = 'purchase'), 0)
+       - coalesce(sum(amount_mid(t.amount_min, t.amount_max))
+            filter (where t.tx_type = 'sale'), 0))::numeric, 0)        as net_volume,
   count(tp.trade_id)                                                   as scored_trades,
   round(avg(tp.alpha)::numeric, 2)                                     as avg_alpha,
   round((avg(case when tp.is_win then 1 else 0 end) * 100)::numeric, 1) as win_rate,
@@ -198,3 +202,15 @@ left join trade_performance tp on tp.trade_id = t.id
 where t.ticker is not null
   and asset_class(t.asset_type, t.ticker) = 'stock'
 group by t.ticker;
+
+-- Estatísticas globais (uma linha) para o cabeçalho da home.
+create or replace view global_stats as
+select
+  count(*)                                                              as total_trades,
+  count(*) filter (where transaction_date >= current_date - 30)         as trades_30d,
+  count(distinct politician_id)                                        as politicians,
+  count(distinct ticker) filter
+    (where ticker is not null and asset_class(asset_type, ticker) = 'stock') as stocks,
+  round(avg(disclosure_delay_days)::numeric, 1)                        as avg_delay,
+  round(sum(amount_mid(amount_min, amount_max))::numeric, 0)           as total_volume
+from trades;

@@ -70,6 +70,15 @@ export type PoliticianSummary = {
   last_traded: string | null;
 };
 
+export type GlobalStats = {
+  total_trades: number;
+  trades_30d: number;
+  politicians: number;
+  stocks: number;
+  avg_delay: number | null;
+  total_volume: number | null;
+};
+
 export type TickerSummary = {
   ticker: string;
   asset_description: string | null;
@@ -80,6 +89,7 @@ export type TickerSummary = {
   est_volume: number | null;
   buy_volume: number | null;
   sell_volume: number | null;
+  net_volume: number | null;
   scored_trades: number;
   avg_alpha: number | null;
   win_rate: number | null;

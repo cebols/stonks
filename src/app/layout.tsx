@@ -18,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">Home</Link>
               <Link href="/trades">Trades</Link>
               <Link href="/stocks">Ações</Link>
+              <Link href="/signals">Sinais</Link>
               <Link href="/politicians">Políticos</Link>
               <Link href="/leaderboard">Leaderboard</Link>
               <Link href="/compare">Comparar</Link>

@@ -7,7 +7,7 @@ import { Toolbar, TextFilter, SelectFilter, SortTh, compareBy, Sort } from './co
 
 type Col =
   | 'ticker' | 'trade_count' | 'filer_count' | 'purchases' | 'sales'
-  | 'buy_volume' | 'sell_volume' | 'est_volume' | 'avg_alpha' | 'win_rate' | 'last_traded';
+  | 'buy_volume' | 'sell_volume' | 'net_volume' | 'est_volume' | 'avg_alpha' | 'win_rate' | 'last_traded';
 
 export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
   const [q, setQ] = useState('');
@@ -50,6 +50,7 @@ export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
             <SortTh label="Vendas" col="sales" sort={sort} setSort={setSort} numeric />
             <SortTh label="Vol. compra" col="buy_volume" sort={sort} setSort={setSort} numeric />
             <SortTh label="Vol. venda" col="sell_volume" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Fluxo líq." col="net_volume" sort={sort} setSort={setSort} numeric />
             <SortTh label="Alpha méd." col="avg_alpha" sort={sort} setSort={setSort} numeric />
             <SortTh label="Win rate" col="win_rate" sort={sort} setSort={setSort} numeric />
           </tr>
@@ -64,6 +65,9 @@ export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
               <td className="mono sell">{s.sales}</td>
               <td className="mono">{fmtMoney(s.buy_volume)}</td>
               <td className="mono">{fmtMoney(s.sell_volume)}</td>
+              <td className={`mono ${(s.net_volume ?? 0) >= 0 ? 'pos' : 'neg'}`}>
+                {(s.net_volume ?? 0) >= 0 ? '+' : '−'}{fmtMoney(Math.abs(s.net_volume ?? 0))}
+              </td>
               <td className={`mono ${pctClass(s.avg_alpha)}`}>{fmtPct(s.avg_alpha)}</td>
               <td className="mono">{s.win_rate != null ? `${s.win_rate}%` : '—'}</td>
             </tr>

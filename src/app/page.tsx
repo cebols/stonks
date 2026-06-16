@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getSupabase, type PoliticianSummary, type TickerSummary, type Trade } from '@/lib/supabase';
+import { getSupabase, type PoliticianSummary, type TickerSummary, type Trade, type GlobalStats } from '@/lib/supabase';
 import { fmtPct, pctClass, fmtMoney, fmtAmount } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ type RecentTrade = Trade & { politician: { full_name: string } | null };
 async function getDashboard() {
   const supabase = getSupabase();
   const since90 = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
-  const [topPols, mostBought, bestStocks, recent, recentBuys] = await Promise.all([
+  const [topPols, mostBought, bestStocks, recent, recentBuys, stats, netFlow] = await Promise.all([
     supabase.from('politician_summary').select('*').gte('scored_trades', 10)
       .not('avg_alpha', 'is', null)
       .order('avg_alpha', { ascending: false, nullsFirst: false }).limit(6),
@@ -25,6 +25,9 @@ async function getDashboard() {
     supabase.from('trades').select('ticker, politician_id, transaction_date, tx_type')
       .eq('tx_type', 'purchase').not('ticker', 'is', null)
       .gte('transaction_date', since90).limit(1000),
+    supabase.from('global_stats').select('*').maybeSingle(),
+    supabase.from('ticker_summary').select('*').not('net_volume', 'is', null)
+      .order('net_volume', { ascending: false, nullsFirst: false }).limit(8),
   ]);
 
   // "Em alta": tickers com mais políticos distintos comprando em 90 dias.
@@ -43,6 +46,8 @@ async function getDashboard() {
     bestStocks: (bestStocks.data ?? []) as TickerSummary[],
     recent: (recent.data ?? []) as unknown as RecentTrade[],
     hot,
+    stats: stats.data as GlobalStats | null,
+    netFlow: (netFlow.data ?? []) as TickerSummary[],
   };
 }
 
@@ -61,7 +66,7 @@ function TickerRow({ s, metric }: { s: TickerSummary; metric: 'buy' | 'alpha' })
 }
 
 export default async function HomePage() {
-  const { topPols, mostBought, bestStocks, recent, hot } = await getDashboard();
+  const { topPols, mostBought, bestStocks, recent, hot, stats, netFlow } = await getDashboard();
   const empty = topPols.length === 0 && mostBought.length === 0;
 
   return (
@@ -71,6 +76,17 @@ export default async function HomePage() {
         <p className="muted">
           Sem dados agregados ainda — rode o <code>schema.sql</code> no Supabase para criar as views.
         </p>
+      )}
+
+      {stats && (
+        <div className="cards" style={{ marginBottom: 16 }}>
+          <div className="card"><div className="val">{stats.total_trades.toLocaleString('pt-BR')}</div><div className="lbl">trades rastreadas</div></div>
+          <div className="card"><div className="val">{stats.trades_30d}</div><div className="lbl">trades (últimos 30d)</div></div>
+          <div className="card"><div className="val">{stats.politicians}</div><div className="lbl">políticos</div></div>
+          <div className="card"><div className="val">{stats.stocks}</div><div className="lbl">ações distintas</div></div>
+          <div className="card"><div className="val">{fmtMoney(stats.total_volume)}</div><div className="lbl">volume estimado</div></div>
+          <div className="card"><div className="val">{stats.avg_delay != null ? `${stats.avg_delay}d` : '—'}</div><div className="lbl">delay médio</div></div>
+        </div>
       )}
 
       <div className="grid2">
@@ -115,6 +131,22 @@ export default async function HomePage() {
               </tbody>
             </table>
           )}
+        </div>
+
+        <div className="chartbox">
+          <h3>💸 Maior fluxo líquido de compra (compras − vendas, all-time)</h3>
+          <table>
+            <tbody>
+              {netFlow.map((s) => (
+                <tr key={s.ticker}>
+                  <td className="mono"><Link href={`/stocks/${s.ticker}`}>{s.ticker}</Link></td>
+                  <td className="mono muted">{s.filer_count} pol.</td>
+                  <td className="mono pos" style={{ textAlign: 'right' }}>+{fmtMoney(s.net_volume)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p style={{ margin: '8px 0 0' }}><Link href="/signals" className="muted">Ver sinais (cluster buys, smart money) →</Link></p>
         </div>
 
         <div className="chartbox" style={{ gridColumn: '1 / -1' }}>
