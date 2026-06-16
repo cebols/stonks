@@ -9,15 +9,16 @@ export default function TradingViewChart({ symbol, height = 560 }: { symbol: str
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
-    container.innerHTML =
-      '<div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>';
+    container.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
 
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
     script.type = 'text/javascript';
     script.async = true;
+    // Altura explícita (sem autosize) — evita o widget colapsar numa faixa fina.
     script.innerHTML = JSON.stringify({
-      autosize: true,
+      width: '100%',
+      height,
       symbol,
       interval: 'D',
       timezone: 'Etc/UTC',
@@ -31,12 +32,12 @@ export default function TradingViewChart({ symbol, height = 560 }: { symbol: str
     container.appendChild(script);
 
     return () => { container.innerHTML = ''; };
-  }, [symbol]);
+  }, [symbol, height]);
 
   return (
     <div className="chartbox">
       <h3>Cotação — TradingView</h3>
-      <div className="tradingview-widget-container" ref={ref} style={{ height, width: '100%' }} />
+      <div className="tradingview-widget-container" ref={ref} style={{ height: height + 40, width: '100%' }} />
     </div>
   );
 }
