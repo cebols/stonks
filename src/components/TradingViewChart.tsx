@@ -3,13 +3,14 @@ import { useEffect, useRef } from 'react';
 
 // Embed gratuito do TradingView (Advanced Chart). Carrega 100% no navegador do
 // visitante via script oficial — não depende do nosso backend.
-export default function TradingViewChart({ symbol, height = 460 }: { symbol: string; height?: number }) {
+export default function TradingViewChart({ symbol, height = 560 }: { symbol: string; height?: number }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = ref.current;
     if (!container) return;
-    container.innerHTML = '<div class="tradingview-widget-container__widget"></div>';
+    container.innerHTML =
+      '<div class="tradingview-widget-container__widget" style="height:calc(100% - 32px);width:100%"></div>';
 
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
