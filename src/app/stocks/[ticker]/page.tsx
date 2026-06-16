@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getSupabase, type TickerSummary } from '@/lib/supabase';
 import StockCharts, { type StockTrade } from '@/components/StockCharts';
 import PerformanceCurve, { type PerfTrade } from '@/components/PerformanceCurve';
+import TradingViewChart from '@/components/TradingViewChart';
 import { fmtAmount, fmtDate, fmtPct, pctClass, fmtMoney } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
@@ -75,6 +76,8 @@ export default async function StockPage({ params }: { params: { ticker: string }
           <div className="lbl">win rate</div>
         </div>
       </div>
+
+      <TradingViewChart symbol={summary.ticker} />
 
       {(() => {
         const oldest = perfTrades
