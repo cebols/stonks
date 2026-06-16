@@ -135,6 +135,14 @@ end $$;
 -- "risk-free brasileiro". Preenchido pelo ingest (fonte: API do Banco Central).
 alter table trade_performance add column if not exists cdi_return_pct numeric;
 
+-- Marca se a trade é a PRIMEIRA compra daquele ticker por aquele político
+-- (abertura de posição) dentro do dataset. Preenchido pelo ingest.
+alter table trades add column if not exists is_opening boolean;
+
+-- Comitês do Congresso a que o político pertence (membros atuais). Preenchido
+-- pelo ingest a partir de unitedstates/congress-legislators.
+alter table politicians add column if not exists committees text[];
+
 -- Classificação de ativo a partir do código do disclosure (House/Senate).
 -- stock = ações; fund = fundos (ETF/mútuo/hedge/anuidade); other = bonds,
 -- títulos públicos/municipais, opções, etc. (ou sem ticker).
@@ -161,7 +169,7 @@ $$;
 -- contagens totais e só-stock, alpha médio e win rate.
 create or replace view politician_summary as
 select
-  p.id, p.full_name, p.chamber, p.party, p.state,
+  p.id, p.full_name, p.chamber, p.party, p.state, p.committees,
   count(t.id)                                                          as total_trades,
   count(t.id) filter (where asset_class(t.asset_type, t.ticker) = 'stock') as stock_trades,
   count(tp.trade_id)                                                   as scored_trades,
@@ -172,7 +180,7 @@ select
 from politicians p
 left join trades t             on t.politician_id = p.id
 left join trade_performance tp on tp.trade_id = t.id
-group by p.id, p.full_name, p.chamber, p.party, p.state;
+group by p.id, p.full_name, p.chamber, p.party, p.state, p.committees;
 
 -- Resumo por ticker (apenas ações): volume de compra/venda (estimado pelo
 -- midpoint), nº de políticos, e desempenho (alpha/win rate) agregado.

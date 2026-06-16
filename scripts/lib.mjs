@@ -91,6 +91,58 @@ export async function fetchJSON(url) {
   return res.json();
 }
 
+// Normaliza um nome para "primeiro último" (sem acentos/pontuação/sufixos),
+// usado para casar nossos filer_name com a base de legisladores.
+const SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
+export function nameKey(name) {
+  const toks = String(name || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/)
+    .filter((t) => t && !SUFFIXES.has(t));
+  if (toks.length < 2) return toks.join(' ');
+  return `${toks[0]} ${toks[toks.length - 1]}`;
+}
+
+// Mapa "primeiro último" -> [nomes de comitês] a partir de
+// unitedstates/congress-legislators (membros atuais). Gratuito, sem chave.
+export async function fetchCommitteesByName() {
+  const BASE = 'https://unitedstates.github.io/congress-legislators';
+  const [legs, committees, membership] = await Promise.all([
+    fetchJSON(`${BASE}/legislators-current.json`),
+    fetchJSON(`${BASE}/committees-current.json`),
+    fetchJSON(`${BASE}/committee-membership-current.json`),
+  ]);
+
+  // code -> nome do comitê
+  const nameByCode = new Map();
+  for (const c of committees) {
+    const code = c.thomas_id || c.house_committee_id || c.senate_committee_id;
+    if (code) nameByCode.set(code, c.name);
+  }
+  // bioguide -> Set(nomes de comitês) — só comitês "raiz" (ignora subcomitês,
+  // cujos códigos têm mais de 4 chars).
+  const byBioguide = new Map();
+  for (const [code, members] of Object.entries(membership)) {
+    const cname = nameByCode.get(code);
+    if (!cname || code.length > 4) continue;
+    for (const m of members) {
+      if (!m.bioguide) continue;
+      if (!byBioguide.has(m.bioguide)) byBioguide.set(m.bioguide, new Set());
+      byBioguide.get(m.bioguide).add(cname);
+    }
+  }
+  // nome normalizado -> bioguide
+  const byName = new Map();
+  for (const l of legs) {
+    const full = l.name.official_full || `${l.name.first} ${l.name.last}`;
+    const bg = l.id && l.id.bioguide;
+    if (!bg) continue;
+    const cs = byBioguide.get(bg);
+    if (cs) byName.set(nameKey(full), [...cs].sort());
+  }
+  return byName;
+}
+
 // Série diária do CDI (Banco Central — SGS 12), como índice acumulado.
 // Retorna [{ date: 'YYYY-MM-DD', cum }] em ordem crescente. cum = fator
 // acumulado (produto de 1 + taxa_diária). Gratuito, sem chave.

@@ -13,6 +13,7 @@
 import {
   getServiceClient, slugify, normalizeTxType, normalizeTicker, toISODate,
   upsertInChunks, fetchJSON, fetchCDIIndex, cdiReturnSince,
+  fetchCommitteesByName, nameKey,
 } from './lib.mjs';
 
 const DEFAULT_URL =
@@ -110,6 +111,32 @@ async function main() {
   const perf = [...new Map(
     mapped.filter((m) => m.perf).map((m) => [m.perf.trade_id, m.perf])
   ).values()];
+
+  // is_opening: marca a 1ª compra de cada (político, ticker) no dataset.
+  const firstBuy = new Map();
+  for (const t of trades) {
+    if (t.tx_type !== 'purchase' || !t.ticker || !t.transaction_date) continue;
+    const k = `${t.politician_id}|${t.ticker}`;
+    const cur = firstBuy.get(k);
+    if (!cur || t.transaction_date < cur) firstBuy.set(k, t.transaction_date);
+  }
+  for (const t of trades) {
+    t.is_opening = t.tx_type === 'purchase' && !!t.ticker && !!t.transaction_date &&
+      firstBuy.get(`${t.politician_id}|${t.ticker}`) === t.transaction_date;
+  }
+
+  // Comitês do Congresso por político (membros atuais).
+  try {
+    const byName = await fetchCommitteesByName();
+    let n = 0;
+    for (const p of politicians) {
+      const cs = byName.get(nameKey(p.full_name));
+      if (cs) { p.committees = cs; n++; }
+    }
+    console.log(`→ Comitês casados para ${n}/${politicians.length} políticos.`);
+  } catch (e) {
+    console.warn(`⚠️  Comitês indisponíveis (${e.message}) — seguindo sem comitês.`);
+  }
 
   // CDI (Banco Central) por trade: retorno acumulado da data da trade até hoje.
   try {

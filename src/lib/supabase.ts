@@ -33,6 +33,7 @@ export type Trade = {
   amount_min: number | null;
   amount_max: number | null;
   disclosure_delay_days: number | null;
+  is_opening: boolean | null;
 };
 
 export type Politician = {
@@ -61,6 +62,7 @@ export type PoliticianSummary = {
   chamber: 'house' | 'senate';
   party: string | null;
   state: string | null;
+  committees: string[] | null;
   total_trades: number;
   stock_trades: number;
   scored_trades: number;

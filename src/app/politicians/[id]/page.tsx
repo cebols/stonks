@@ -51,7 +51,12 @@ export default async function PoliticianPage({ params }: { params: { id: string 
   return (
     <>
       <p style={{ margin: '0 0 4px' }}><Link href="/politicians" className="muted">← Políticos</Link></p>
-      <h2 style={{ marginTop: 0 }}>{summary.full_name}</h2>
+      <h2 style={{ marginTop: 0, marginBottom: 6 }}>{summary.full_name}</h2>
+      {summary.committees && summary.committees.length > 0 && (
+        <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {summary.committees.map((c) => <span key={c} className="tag">{c}</span>)}
+        </div>
+      )}
 
       <div className="cards">
         <div className="card"><div className="val">{summary.total_trades}</div><div className="lbl">trades totais</div></div>

@@ -2,79 +2,151 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { assetClass, amountMid } from '@/lib/assetClass';
-import { fmtMoney, fmtPct, pctClass } from '@/lib/format';
+import { fmtMoney } from '@/lib/format';
 import { Segmented } from './controls';
 
-export type SignalBuy = {
+export type SignalTrade = {
   ticker: string;
   politician_id: string;
   asset_type: string | null;
+  tx_type: string | null;
   transaction_date: string | null;
+  disclosure_delay_days: number | null;
   amount_min: number | null;
   amount_max: number | null;
+  is_opening: boolean | null;
   politician: { full_name: string } | null;
 };
-export type SignalSummary = { id: string; full_name: string; avg_alpha: number | null; scored_trades: number };
+export type SignalSummary = {
+  id: string; full_name: string; avg_alpha: number | null;
+  scored_trades: number; committees: string[] | null;
+};
 
 const WINDOWS = [
   { value: '7', label: '7d' }, { value: '15', label: '15d' },
   { value: '30', label: '30d' }, { value: '90', label: '90d' },
 ];
 
-export default function Signals({ buys, summaries }: { buys: SignalBuy[]; summaries: SignalSummary[] }) {
+function Buyers({ names }: { names: string[] }) {
+  return (
+    <span className="muted" style={{ fontSize: 11 }}>
+      · {names.slice(0, 3).join(', ')}{names.length > 3 ? `… +${names.length - 3}` : ''}
+    </span>
+  );
+}
+
+export default function Signals({ trades, summaries }: { trades: SignalTrade[]; summaries: SignalSummary[] }) {
   const [win, setWin] = useState('30');
   const [minBuyers, setMinBuyers] = useState('3');
+  const [committee, setCommittee] = useState('');
 
-  // Limite de "alto alpha" = 75º percentil entre políticos com ≥10 pontuadas.
-  const { alphaOf, smartIds, smartCut } = useMemo(() => {
-    const alphaOf = new Map(summaries.map((s) => [s.id, s.avg_alpha]));
+  const alphaOf = useMemo(() => new Map(summaries.map((s) => [s.id, s.avg_alpha])), [summaries]);
+  const committeesOf = useMemo(() => new Map(summaries.map((s) => [s.id, s.committees ?? []])), [summaries]);
+
+  // Lista de comitês (para o filtro).
+  const allCommittees = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of summaries) for (const c of s.committees ?? []) set.add(c);
+    return [...set].sort();
+  }, [summaries]);
+
+  // "Alto alpha" = top 25% por alpha médio (mín. 10 pontuadas).
+  const { smartIds, smartCut } = useMemo(() => {
     const pool = summaries.filter((s) => s.scored_trades >= 10 && s.avg_alpha != null)
       .map((s) => s.avg_alpha as number).sort((a, b) => a - b);
     const smartCut = pool.length ? pool[Math.floor(pool.length * 0.75)] : 0;
     const smartIds = new Set(
       summaries.filter((s) => s.scored_trades >= 10 && (s.avg_alpha ?? -1e9) >= smartCut).map((s) => s.id),
     );
-    return { alphaOf, smartIds, smartCut };
+    return { smartIds, smartCut };
   }, [summaries]);
 
   const scoped = useMemo(() => {
     const cutoff = new Date(Date.now() - Number(win) * 864e5).toISOString().slice(0, 10);
-    return buys.filter((b) =>
-      b.transaction_date && b.transaction_date >= cutoff &&
-      assetClass(b.asset_type, b.ticker) === 'stock');
-  }, [buys, win]);
+    return trades.filter((t) =>
+      t.ticker && t.transaction_date && t.transaction_date >= cutoff &&
+      assetClass(t.asset_type, t.ticker) === 'stock' &&
+      (!committee || (committeesOf.get(t.politician_id) ?? []).includes(committee)));
+  }, [trades, win, committee, committeesOf]);
 
-  // Cluster buys: tickers com mais políticos distintos comprando na janela.
-  const clusters = useMemo(() => {
-    const m = new Map<string, { buyers: Set<string>; vol: number; names: Set<string> }>();
-    for (const b of scoped) {
-      const e = m.get(b.ticker) ?? { buyers: new Set(), vol: 0, names: new Set() };
-      e.buyers.add(b.politician_id);
-      e.vol += amountMid(b.amount_min, b.amount_max);
-      if (b.politician?.full_name) e.names.add(b.politician.full_name);
-      m.set(b.ticker, e);
-    }
-    return [...m.entries()]
-      .map(([ticker, e]) => ({ ticker, buyers: e.buyers.size, vol: e.vol, names: [...e.names] }))
-      .filter((x) => x.buyers >= Number(minBuyers))
-      .sort((a, b) => b.buyers - a.buyers).slice(0, 20);
-  }, [scoped, minBuyers]);
+  const min = Number(minBuyers);
 
-  // Smart money: compras na janela por políticos de alto alpha.
-  const smart = useMemo(() => {
-    const m = new Map<string, { buyers: Set<string>; vol: number; names: string[] }>();
-    for (const b of scoped) {
-      if (!smartIds.has(b.politician_id)) continue;
-      const e = m.get(b.ticker) ?? { buyers: new Set(), vol: 0, names: [] };
-      if (!e.buyers.has(b.politician_id) && b.politician?.full_name) e.names.push(b.politician.full_name);
-      e.buyers.add(b.politician_id);
-      e.vol += amountMid(b.amount_min, b.amount_max);
-      m.set(b.ticker, e);
+  // Agrega por ticker: compradores, vendedores, smart, aberturas, volumes.
+  const byTicker = useMemo(() => {
+    type Agg = {
+      buyers: Set<string>; sellers: Set<string>; smart: Set<string>;
+      openings: Set<string>; buyVol: number; sellVol: number; buyerNames: Set<string>;
+      smartNames: Set<string>; sellerNames: Set<string>; openerNames: Set<string>;
+    };
+    const m = new Map<string, Agg>();
+    const get = (k: string): Agg => {
+      let a = m.get(k);
+      if (!a) { a = { buyers: new Set(), sellers: new Set(), smart: new Set(), openings: new Set(), buyVol: 0, sellVol: 0, buyerNames: new Set(), smartNames: new Set(), sellerNames: new Set(), openerNames: new Set() }; m.set(k, a); }
+      return a;
+    };
+    for (const t of scoped) {
+      const a = get(t.ticker);
+      const name = t.politician?.full_name ?? t.politician_id;
+      const vol = amountMid(t.amount_min, t.amount_max);
+      if (t.tx_type === 'sale') {
+        a.sellers.add(t.politician_id); a.sellVol += vol; a.sellerNames.add(name);
+      } else {
+        a.buyers.add(t.politician_id); a.buyVol += vol; a.buyerNames.add(name);
+        if (smartIds.has(t.politician_id)) { a.smart.add(t.politician_id); a.smartNames.add(name); }
+        if (t.is_opening) { a.openings.add(t.politician_id); a.openerNames.add(name); }
+      }
     }
-    return [...m.entries()]
-      .map(([ticker, e]) => ({ ticker, buyers: e.buyers.size, vol: e.vol, names: e.names }))
-      .sort((a, b) => b.buyers - a.buyers || b.vol - a.vol).slice(0, 20);
+    return m;
   }, [scoped, smartIds]);
+
+  // Conviction score: combina compradores, smart money, aberturas e fluxo líquido.
+  const conviction = useMemo(() => {
+    return [...byTicker.entries()].map(([ticker, a]) => {
+      const buyers = a.buyers.size, smart = a.smart.size, openings = a.openings.size;
+      const net = a.buyVol - a.sellVol;
+      const alphas = [...a.buyers].map((id) => alphaOf.get(id)).filter((x): x is number => x != null);
+      const avgAlpha = alphas.length ? alphas.reduce((s, x) => s + x, 0) / alphas.length : 0;
+      const score = +(buyers + 1.5 * smart + openings + (net > 0 ? 1 : 0) + Math.max(-5, Math.min(5, avgAlpha / 5))).toFixed(1);
+      return { ticker, buyers, smart, openings, net, avgAlpha: +avgAlpha.toFixed(1), score };
+    }).filter((x) => x.buyers >= min).sort((a, b) => b.score - a.score).slice(0, 20);
+  }, [byTicker, alphaOf, min]);
+
+  const clusterBuys = useMemo(() =>
+    [...byTicker.entries()].map(([ticker, a]) => ({ ticker, n: a.buyers.size, vol: a.buyVol, names: [...a.buyerNames] }))
+      .filter((x) => x.n >= min).sort((a, b) => b.n - a.n).slice(0, 15), [byTicker, min]);
+
+  const sellPressure = useMemo(() =>
+    [...byTicker.entries()].map(([ticker, a]) => ({ ticker, n: a.sellers.size, vol: a.sellVol, names: [...a.sellerNames] }))
+      .filter((x) => x.n >= min).sort((a, b) => b.n - a.n).slice(0, 15), [byTicker, min]);
+
+  const smartMoney = useMemo(() =>
+    [...byTicker.entries()].map(([ticker, a]) => ({ ticker, n: a.smart.size, vol: a.buyVol, names: [...a.smartNames] }))
+      .filter((x) => x.n >= 1).sort((a, b) => b.n - a.n || b.vol - a.vol).slice(0, 15), [byTicker]);
+
+  const firstTime = useMemo(() =>
+    [...byTicker.entries()].map(([ticker, a]) => ({ ticker, n: a.openings.size, names: [...a.openerNames] }))
+      .filter((x) => x.n >= 1).sort((a, b) => b.n - a.n).slice(0, 15), [byTicker]);
+
+  // Divulgação rápida: compras divulgadas em ≤ 7 dias (sinal mais fresco).
+  const fast = useMemo(() =>
+    scoped.filter((t) => t.tx_type !== 'sale' && t.disclosure_delay_days != null && t.disclosure_delay_days <= 7)
+      .sort((a, b) => (a.disclosure_delay_days! - b.disclosure_delay_days!))
+      .slice(0, 15), [scoped]);
+
+  const SignalTable = ({ rows }: { rows: { ticker: string; n: number; vol?: number; names: string[] }[] }) => (
+    <table>
+      <thead><tr><th>Ticker</th><th>Políticos</th><th style={{ textAlign: 'right' }}>Volume</th></tr></thead>
+      <tbody>
+        {rows.map((c) => (
+          <tr key={c.ticker}>
+            <td className="mono"><Link href={`/stocks/${c.ticker}`}>{c.ticker}</Link></td>
+            <td>{c.n} <Buyers names={c.names} /></td>
+            <td className="mono" style={{ textAlign: 'right' }}>{c.vol != null ? fmtMoney(c.vol) : '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <>
@@ -85,48 +157,95 @@ export default function Signals({ buys, summaries }: { buys: SignalBuy[]; summar
             {['2', '3', '5', '8'].map((n) => <option key={n} value={n}>{n}+</option>)}
           </select>
         </label>
-        <span className="count">{scoped.length} compras na janela</span>
+        <label>Comitê
+          <select value={committee} onChange={(e) => setCommittee(e.target.value)}>
+            <option value="">Todos</option>
+            {allCommittees.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <span className="count">{scoped.length} trades na janela</span>
+      </div>
+
+      <div className="chartbox">
+        <h3>⭐ Conviction score — ranking de convicção</h3>
+        <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>
+          Score = nº de compradores + 1,5×smart money + aberturas de posição + fluxo líquido positivo + alpha médio dos compradores.
+        </p>
+        {conviction.length === 0 ? <p className="muted">Nada nesta janela/filtro.</p> : (
+          <table>
+            <thead>
+              <tr>
+                <th>Ticker</th><th style={{ textAlign: 'right' }}>Score</th><th style={{ textAlign: 'right' }}>Compr.</th>
+                <th style={{ textAlign: 'right' }}>Smart</th><th style={{ textAlign: 'right' }}>Aberturas</th>
+                <th style={{ textAlign: 'right' }}>Fluxo líq.</th><th style={{ textAlign: 'right' }}>α méd.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {conviction.map((c) => (
+                <tr key={c.ticker}>
+                  <td className="mono"><Link href={`/stocks/${c.ticker}`}>{c.ticker}</Link></td>
+                  <td className="mono" style={{ textAlign: 'right', fontWeight: 700 }}>{c.score}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{c.buyers}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{c.smart}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{c.openings}</td>
+                  <td className={`mono ${c.net >= 0 ? 'pos' : 'neg'}`} style={{ textAlign: 'right' }}>{c.net >= 0 ? '+' : '−'}{fmtMoney(Math.abs(c.net))}</td>
+                  <td className={`mono ${c.avgAlpha >= 0 ? 'pos' : 'neg'}`} style={{ textAlign: 'right' }}>{c.avgAlpha > 0 ? '+' : ''}{c.avgAlpha}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="grid2">
         <div className="chartbox">
-          <h3>🤝 Cluster buys — mesmo ticker comprado por vários políticos</h3>
-          {clusters.length === 0 ? <p className="muted">Nenhum cluster nesta janela.</p> : (
-            <table>
-              <thead><tr><th>Ticker</th><th>Políticos</th><th style={{ textAlign: 'right' }}>Volume</th></tr></thead>
-              <tbody>
-                {clusters.map((c) => (
-                  <tr key={c.ticker}>
-                    <td className="mono"><Link href={`/stocks/${c.ticker}`}>{c.ticker}</Link></td>
-                    <td>{c.buyers} <span className="muted" style={{ fontSize: 11 }}>· {c.names.slice(0, 3).join(', ')}{c.names.length > 3 ? '…' : ''}</span></td>
-                    <td className="mono" style={{ textAlign: 'right' }}>{fmtMoney(c.vol)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <h3>🤝 Cluster buys — comprado por vários políticos</h3>
+          {clusterBuys.length === 0 ? <p className="muted">Nenhum cluster.</p> : <SignalTable rows={clusterBuys} />}
         </div>
-
         <div className="chartbox">
-          <h3>🧠 Smart money — compras por políticos de alto alpha</h3>
-          <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>
-            "Alto alpha" = top 25% por alpha médio (mín. 10 trades pontuadas; corte ≥ {smartCut?.toFixed?.(1) ?? '—'}%).
-          </p>
-          {smart.length === 0 ? <p className="muted">Nenhuma compra de alto alpha nesta janela.</p> : (
+          <h3>📉 Sell pressure — vendido por vários políticos</h3>
+          {sellPressure.length === 0 ? <p className="muted">Nenhuma pressão de venda.</p> : <SignalTable rows={sellPressure} />}
+        </div>
+        <div className="chartbox">
+          <h3>🧠 Smart money — compras de políticos de alto alpha</h3>
+          <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>Top 25% por alpha (corte ≥ {smartCut?.toFixed?.(1) ?? '—'}%).</p>
+          {smartMoney.length === 0 ? <p className="muted">Nenhuma compra de alto alpha.</p> : <SignalTable rows={smartMoney} />}
+        </div>
+        <div className="chartbox">
+          <h3>🌱 First-time buys — abertura de posição nova</h3>
+          {firstTime.length === 0 ? <p className="muted">Nenhuma abertura nova.</p> : (
             <table>
-              <thead><tr><th>Ticker</th><th>Políticos</th><th style={{ textAlign: 'right' }}>Volume</th></tr></thead>
+              <thead><tr><th>Ticker</th><th>Políticos abrindo</th></tr></thead>
               <tbody>
-                {smart.map((c) => (
+                {firstTime.map((c) => (
                   <tr key={c.ticker}>
                     <td className="mono"><Link href={`/stocks/${c.ticker}`}>{c.ticker}</Link></td>
-                    <td>{c.buyers} <span className="muted" style={{ fontSize: 11 }}>· {c.names.slice(0, 3).join(', ')}{c.names.length > 3 ? '…' : ''}</span></td>
-                    <td className="mono" style={{ textAlign: 'right' }}>{fmtMoney(c.vol)}</td>
+                    <td>{c.n} <Buyers names={c.names} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </div>
+      </div>
+
+      <div className="chartbox">
+        <h3>⚡ Divulgação rápida — compras divulgadas em ≤ 7 dias (sinal mais fresco)</h3>
+        {fast.length === 0 ? <p className="muted">Nenhuma divulgação rápida na janela.</p> : (
+          <table>
+            <thead><tr><th>Ticker</th><th>Político</th><th>Data trade</th><th style={{ textAlign: 'right' }}>Delay</th></tr></thead>
+            <tbody>
+              {fast.map((t, i) => (
+                <tr key={i}>
+                  <td className="mono"><Link href={`/stocks/${t.ticker}`}>{t.ticker}</Link></td>
+                  <td><Link href={`/politicians/${t.politician_id}`}>{t.politician?.full_name}</Link></td>
+                  <td className="mono">{t.transaction_date}</td>
+                  <td className="mono" style={{ textAlign: 'right' }}>{t.disclosure_delay_days}d</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );
