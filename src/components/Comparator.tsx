@@ -118,7 +118,7 @@ export default function Comparator({
           </table>
 
           <div className="chartbox" style={{ marginTop: 16 }}>
-            <h3>Cumulative return of purchases vs S&P vs CDI</h3>
+            <h3>Growth of $1 invested vs S&P vs CDI (buy-and-hold, real prices)</h3>
             <div className="toolbar" style={{ margin: '0 0 8px' }}>
               <RangeSelect value={range} onChange={setRange} />
             </div>

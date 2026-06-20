@@ -1,81 +1,69 @@
 import { NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { cutoffISO, Range } from '@/lib/range';
+import { Buy, Lot, loadPrices, toLots, aggregateAt, endMonth, monthsBetween } from '@/lib/equity';
 
 export const dynamic = 'force-dynamic';
 
-type PerfEmbed = { return_pct: number | null; benchmark_return_pct: number | null; cdi_return_pct: number | null };
-type Row = {
-  politician_id: string; transaction_date: string | null; tx_type: string | null;
-  amount_min: number | null; amount_max: number | null;
-  perf: PerfEmbed | PerfEmbed[] | null;
-};
+// Curva de EQUITY REAL para vários políticos: uma linha (growth of $1,
+// buy-and-hold sobre preços mensais reais) por político, mais S&P (SPY) e CDI
+// calculados sobre a UNIÃO de todos os aportes. Mesma base da rota /api/equity.
 
-const mid = (a: number | null, b: number | null) => ((a ?? 0) + (b ?? a ?? 0)) / 2;
-
-// Série cumulativa (média ponderada por valor) por mês a partir de uma lista de
-// trades de compra. fn extrai o valor (retorno / benchmark / cdi) de cada trade.
-function cumulativeByMonth(rows: Row[], fn: (p: PerfEmbed) => number | null): Map<string, number> {
-  const sorted = rows
-    .filter((r) => r.transaction_date)
-    .sort((a, b) => (a.transaction_date! < b.transaction_date! ? -1 : 1));
-  let w = 0, wv = 0;
-  const out = new Map<string, number>();
-  for (const r of sorted) {
-    const p = Array.isArray(r.perf) ? r.perf[0] : r.perf;
-    const v = p ? fn(p) : null;
-    if (v == null) continue;
-    const weight = Math.max(mid(r.amount_min, r.amount_max), 1);
-    w += weight; wv += weight * v;
-    out.set(r.transaction_date!.slice(0, 7), +(wv / w).toFixed(1));
-  }
-  return out;
-}
+type Row = Buy & { politician_id: string };
 
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const ids = (params.get('ids') ?? '')
     .split(',').map((s) => s.trim()).filter(Boolean).slice(0, 6);
-  if (ids.length === 0) return NextResponse.json({ data: [], series: [] });
+  if (ids.length === 0) return NextResponse.json({ data: [], ids: [] });
   const cutoff = cutoffISO((params.get('range') as Range) ?? 'all');
 
-  let query = getSupabase()
+  const sb = getSupabase();
+  let q = sb
     .from('trades')
-    .select('politician_id, transaction_date, tx_type, amount_min, amount_max, perf:trade_performance(return_pct, benchmark_return_pct, cdi_return_pct)')
+    .select('politician_id, ticker, transaction_date, amount_min, amount_max')
     .in('politician_id', ids)
     .eq('tx_type', 'purchase')
-    .limit(3000);
-  if (cutoff) query = query.gte('transaction_date', cutoff);
-  const { data, error } = await query;
+    .not('ticker', 'is', null)
+    .not('transaction_date', 'is', null)
+    .limit(5000);
+  if (cutoff) q = q.gte('transaction_date', cutoff);
+  const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = (data ?? []) as unknown as Row[];
+  const buys = (data ?? []) as Row[];
+  if (buys.length === 0) return NextResponse.json({ data: [], ids });
 
-  // uma série por político (retorno da carteira) + S&P e CDI sobre a união.
-  const perPol = new Map<string, Map<string, number>>();
-  for (const id of ids) {
-    perPol.set(id, cumulativeByMonth(rows.filter((r) => r.politician_id === id), (p) => p.return_pct));
+  const tickers = [...new Set(buys.map((b) => b.ticker))];
+  let prices;
+  try {
+    prices = await loadPrices(sb, tickers);
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-  const sp = cumulativeByMonth(rows, (p) => p.benchmark_return_pct);
-  const cdi = cumulativeByMonth(rows, (p) => p.cdi_return_pct);
 
-  // todos os meses, ordenados; forward-fill para linhas contínuas.
-  const months = [...new Set([
-    ...ids.flatMap((id) => [...perPol.get(id)!.keys()]),
-    ...sp.keys(), ...cdi.keys(),
-  ])].sort();
+  // Lotes por político + lotes da união (para SP/CDI e linha do tempo).
+  const lotsByPol = new Map<string, Lot[]>();
+  const allLots: Lot[] = [];
+  for (const id of ids) {
+    const lots = toLots(buys.filter((b) => b.politician_id === id), prices.priceAt);
+    lotsByPol.set(id, lots);
+    allLots.push(...lots);
+  }
+  if (allLots.length === 0) return NextResponse.json({ data: [], ids });
 
-  const last: Record<string, number | null> = {};
-  const data2 = months.map((month) => {
+  allLots.sort((a, b) => (a.month < b.month ? -1 : 1));
+  const timeline = monthsBetween(allLots[0].month, endMonth(prices.spyMonths, allLots));
+
+  const data2 = timeline.map((month) => {
     const row: Record<string, string | number | null> = { month };
     for (const id of ids) {
-      if (perPol.get(id)!.has(month)) last[id] = perPol.get(id)!.get(month)!;
-      row[id] = last[id] ?? null;
+      const agg = aggregateAt(lotsByPol.get(id)!, prices!.priceAt, month);
+      row[id] = agg ? agg.port : null;
     }
-    if (sp.has(month)) last.sp = sp.get(month)!;
-    if (cdi.has(month)) last.cdi = cdi.get(month)!;
-    row.sp = last.sp ?? null;
-    row.cdi = last.cdi ?? null;
+    const union = aggregateAt(allLots, prices.priceAt, month);
+    row.sp = union ? union.sp : null;
+    row.cdi = union ? union.cdi : null;
     return row;
   });
 
