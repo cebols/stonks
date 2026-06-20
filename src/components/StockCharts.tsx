@@ -62,7 +62,7 @@ export default function StockCharts({ trades }: { trades: StockTrade[] }) {
     <div className="toolbar"><RangeSelect value={range} onChange={setRange} /></div>
     <div className="grid2">
       <div className="chartbox">
-        <h3>Maiores posições por político (volume estimado)</h3>
+        <h3>Largest positions by politician (estimated volume)</h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={topPols} layout="vertical" margin={{ left: 8, right: 16 }}>
             <XAxis type="number" tick={axis} tickFormatter={money} />
@@ -75,15 +75,15 @@ export default function StockCharts({ trades }: { trades: StockTrade[] }) {
         </ResponsiveContainer>
       </div>
       <div className="chartbox">
-        <h3>Compras vs vendas por mês</h3>
+        <h3>Buys vs sells by month</h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={byMonth} margin={{ left: 8, right: 16 }}>
             <XAxis dataKey="month" tick={axis} />
             <YAxis tick={axis} tickFormatter={money} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="buy" name="Compras" fill={GREEN} radius={[3, 3, 0, 0]} />
-            <Bar dataKey="sell" name="Vendas" fill={RED} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="buy" name="Buys" fill={GREEN} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="sell" name="Sells" fill={RED} radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

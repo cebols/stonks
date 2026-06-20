@@ -80,10 +80,10 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
           value={cat}
           onChange={setCat}
           options={[
-            { value: 'stock', label: 'Ações' },
-            { value: 'fund', label: 'Fundos' },
-            { value: 'other', label: 'Outros' },
-            { value: 'all', label: 'Todos' },
+            { value: 'stock', label: 'Stocks' },
+            { value: 'fund', label: 'Funds' },
+            { value: 'other', label: 'Other' },
+            { value: 'all', label: 'All' },
           ]}
         />
         <RangeSelect value={range} onChange={setRange} />
@@ -91,8 +91,8 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
 
       <div className="grid2">
         <div className="chartbox">
-          <h3>Top posições por volume estimado</h3>
-          {topTickers.length === 0 ? <p className="muted">Sem dados nesta categoria.</p> : (
+          <h3>Top positions by estimated volume</h3>
+          {topTickers.length === 0 ? <p className="muted">No data in this category.</p> : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={topTickers} layout="vertical" margin={{ left: 8, right: 16 }}>
                 <XAxis type="number" tick={axis} tickFormatter={money} />
@@ -105,7 +105,7 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
         </div>
 
         <div className="chartbox">
-          <h3>Composição por categoria (volume)</h3>
+          <h3>Allocation by category (volume)</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie data={byCategory} dataKey="value" nameKey="name" outerRadius={90} label>
@@ -119,16 +119,16 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
       </div>
 
       <div className="chartbox">
-        <h3>Compras vs vendas por mês (volume estimado)</h3>
-        {byMonth.length === 0 ? <p className="muted">Sem dados nesta categoria.</p> : (
+        <h3>Buys vs sells by month (estimated volume)</h3>
+        {byMonth.length === 0 ? <p className="muted">No data in this category.</p> : (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={byMonth} margin={{ left: 8, right: 16 }}>
               <XAxis dataKey="month" tick={axis} />
               <YAxis tick={axis} tickFormatter={money} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="buy" name="Compras" fill={GREEN} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="sell" name="Vendas" fill={RED} radius={[3, 3, 0, 0]} />
+              <Bar dataKey="buy" name="Buys" fill={GREEN} radius={[3, 3, 0, 0]} />
+              <Bar dataKey="sell" name="Sells" fill={RED} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

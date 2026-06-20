@@ -50,7 +50,7 @@ export default async function PoliticianPage({ params }: { params: { id: string 
 
   return (
     <>
-      <p style={{ margin: '0 0 4px' }}><Link href="/politicians" className="muted">← Políticos</Link></p>
+      <p style={{ margin: '0 0 4px' }}><Link href="/politicians" className="muted">← Politicians</Link></p>
       <h2 style={{ marginTop: 0, marginBottom: 6 }}>{summary.full_name}</h2>
       {summary.committees && summary.committees.length > 0 && (
         <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -59,30 +59,30 @@ export default async function PoliticianPage({ params }: { params: { id: string 
       )}
 
       <div className="cards">
-        <div className="card"><div className="val">{summary.total_trades}</div><div className="lbl">trades totais</div></div>
-        <div className="card"><div className="val">{summary.stock_trades}</div><div className="lbl">em ações</div></div>
+        <div className="card"><div className="val">{summary.total_trades}</div><div className="lbl">total trades</div></div>
+        <div className="card"><div className="val">{summary.stock_trades}</div><div className="lbl">in stocks</div></div>
         <div className="card">
           <div className={`val ${pctClass(summary.avg_alpha)}`}>{fmtPct(summary.avg_alpha)}</div>
-          <div className="lbl">alpha médio vs benchmark</div>
+          <div className="lbl">avg alpha vs benchmark</div>
         </div>
         <div className="card">
           <div className="val">{summary.win_rate != null ? `${summary.win_rate}%` : '—'}</div>
-          <div className="lbl">win rate ({summary.scored_trades} pontuadas)</div>
+          <div className="lbl">win rate ({summary.scored_trades} scored)</div>
         </div>
         <div className="card">
           <div className="val">{summary.avg_disclosure_delay_days != null ? `${summary.avg_disclosure_delay_days}d` : '—'}</div>
-          <div className="lbl">delay médio de divulgação</div>
+          <div className="lbl">avg disclosure delay</div>
         </div>
       </div>
 
-      <h2>Carteira</h2>
+      <h2>Portfolio</h2>
       <PortfolioCharts trades={trades} />
       <PerformanceCurve trades={perfTrades} />
 
-      <h2>Comparar com outros</h2>
+      <h2>Compare with others</h2>
       <Comparator politicians={all} initialIds={[summary.id]} />
 
-      <h2>Histórico de trades</h2>
+      <h2>Trade history</h2>
       <TradesExplorer rows={trades.map((t) => ({ ...t, politician: null })) as TradeRow[]} hidePolitician />
     </>
   );

@@ -135,7 +135,7 @@ export default function Signals({ trades, summaries }: { trades: SignalTrade[]; 
 
   const SignalTable = ({ rows }: { rows: { ticker: string; n: number; vol?: number; names: string[] }[] }) => (
     <table>
-      <thead><tr><th>Ticker</th><th>Políticos</th><th style={{ textAlign: 'right' }}>Volume</th></tr></thead>
+      <thead><tr><th>Ticker</th><th>Politicians</th><th style={{ textAlign: 'right' }}>Volume</th></tr></thead>
       <tbody>
         {rows.map((c) => (
           <tr key={c.ticker}>
@@ -151,33 +151,33 @@ export default function Signals({ trades, summaries }: { trades: SignalTrade[]; 
   return (
     <>
       <div className="toolbar">
-        <label>Janela <Segmented value={win} onChange={setWin} options={WINDOWS} /></label>
-        <label>Mín. políticos
+        <label>Window <Segmented value={win} onChange={setWin} options={WINDOWS} /></label>
+        <label>Min. politicians
           <select value={minBuyers} onChange={(e) => setMinBuyers(e.target.value)}>
             {['2', '3', '5', '8'].map((n) => <option key={n} value={n}>{n}+</option>)}
           </select>
         </label>
-        <label>Comitê
+        <label>Committee
           <select value={committee} onChange={(e) => setCommittee(e.target.value)}>
-            <option value="">Todos</option>
+            <option value="">All</option>
             {allCommittees.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-        <span className="count">{scoped.length} trades na janela</span>
+        <span className="count">{scoped.length} trades in window</span>
       </div>
 
       <div className="chartbox">
-        <h3>⭐ Conviction score — ranking de convicção</h3>
+        <h3>⭐ Conviction score</h3>
         <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>
-          Score = nº de compradores + 1,5×smart money + aberturas de posição + fluxo líquido positivo + alpha médio dos compradores.
+          Score = buyers + 1.5×smart money + position openings + positive net flow + average buyer alpha.
         </p>
-        {conviction.length === 0 ? <p className="muted">Nada nesta janela/filtro.</p> : (
+        {conviction.length === 0 ? <p className="muted">Nothing in this window/filter.</p> : (
           <table>
             <thead>
               <tr>
-                <th>Ticker</th><th style={{ textAlign: 'right' }}>Score</th><th style={{ textAlign: 'right' }}>Compr.</th>
-                <th style={{ textAlign: 'right' }}>Smart</th><th style={{ textAlign: 'right' }}>Aberturas</th>
-                <th style={{ textAlign: 'right' }}>Fluxo líq.</th><th style={{ textAlign: 'right' }}>α méd.</th>
+                <th>Ticker</th><th style={{ textAlign: 'right' }}>Score</th><th style={{ textAlign: 'right' }}>Buyers</th>
+                <th style={{ textAlign: 'right' }}>Smart</th><th style={{ textAlign: 'right' }}>Openings</th>
+                <th style={{ textAlign: 'right' }}>Net flow</th><th style={{ textAlign: 'right' }}>Avg α</th>
               </tr>
             </thead>
             <tbody>
@@ -199,23 +199,23 @@ export default function Signals({ trades, summaries }: { trades: SignalTrade[]; 
 
       <div className="grid2">
         <div className="chartbox">
-          <h3>🤝 Cluster buys — comprado por vários políticos</h3>
-          {clusterBuys.length === 0 ? <p className="muted">Nenhum cluster.</p> : <SignalTable rows={clusterBuys} />}
+          <h3>🤝 Cluster buys — bought by several politicians</h3>
+          {clusterBuys.length === 0 ? <p className="muted">No clusters.</p> : <SignalTable rows={clusterBuys} />}
         </div>
         <div className="chartbox">
-          <h3>📉 Sell pressure — vendido por vários políticos</h3>
-          {sellPressure.length === 0 ? <p className="muted">Nenhuma pressão de venda.</p> : <SignalTable rows={sellPressure} />}
+          <h3>📉 Sell pressure — sold by several politicians</h3>
+          {sellPressure.length === 0 ? <p className="muted">No sell pressure.</p> : <SignalTable rows={sellPressure} />}
         </div>
         <div className="chartbox">
-          <h3>🧠 Smart money — compras de políticos de alto alpha</h3>
-          <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>Top 25% por alpha (corte ≥ {smartCut?.toFixed?.(1) ?? '—'}%).</p>
-          {smartMoney.length === 0 ? <p className="muted">Nenhuma compra de alto alpha.</p> : <SignalTable rows={smartMoney} />}
+          <h3>🧠 Smart money — buys by high-alpha politicians</h3>
+          <p className="muted" style={{ fontSize: 11, marginTop: -4 }}>Top 25% by alpha (cutoff ≥ {smartCut?.toFixed?.(1) ?? '—'}%).</p>
+          {smartMoney.length === 0 ? <p className="muted">No high-alpha buys.</p> : <SignalTable rows={smartMoney} />}
         </div>
         <div className="chartbox">
-          <h3>🌱 First-time buys — abertura de posição nova</h3>
-          {firstTime.length === 0 ? <p className="muted">Nenhuma abertura nova.</p> : (
+          <h3>🌱 First-time buys — new position openings</h3>
+          {firstTime.length === 0 ? <p className="muted">No new openings.</p> : (
             <table>
-              <thead><tr><th>Ticker</th><th>Políticos abrindo</th></tr></thead>
+              <thead><tr><th>Ticker</th><th>Politicians opening</th></tr></thead>
               <tbody>
                 {firstTime.map((c) => (
                   <tr key={c.ticker}>
@@ -230,10 +230,10 @@ export default function Signals({ trades, summaries }: { trades: SignalTrade[]; 
       </div>
 
       <div className="chartbox">
-        <h3>⚡ Divulgação rápida — compras divulgadas em ≤ 7 dias (sinal mais fresco)</h3>
-        {fast.length === 0 ? <p className="muted">Nenhuma divulgação rápida na janela.</p> : (
+        <h3>⚡ Fast disclosure — buys disclosed within 7 days (freshest signal)</h3>
+        {fast.length === 0 ? <p className="muted">No fast disclosures in this window.</p> : (
           <table>
-            <thead><tr><th>Ticker</th><th>Político</th><th>Data trade</th><th style={{ textAlign: 'right' }}>Delay</th></tr></thead>
+            <thead><tr><th>Ticker</th><th>Politician</th><th>Trade date</th><th style={{ textAlign: 'right' }}>Delay</th></tr></thead>
             <tbody>
               {fast.map((t, i) => (
                 <tr key={i}>

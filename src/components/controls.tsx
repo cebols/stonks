@@ -68,7 +68,7 @@ export function Segmented<T extends string>({
 export function RangeSelect({ value, onChange }: { value: Range; onChange: (v: Range) => void }) {
   return (
     <label>
-      Período
+      Period
       <select value={value} onChange={(e) => onChange(e.target.value as Range)}>
         {RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -112,14 +112,14 @@ export function compareBy<T, K extends string>(key: K, dir: SortDir) {
 }
 
 export const partyOptions = [
-  { value: '', label: 'Todos partidos' },
-  { value: 'D', label: 'Democrata' },
-  { value: 'R', label: 'Republicano' },
-  { value: 'I', label: 'Independente' },
+  { value: '', label: 'All parties' },
+  { value: 'D', label: 'Democrat' },
+  { value: 'R', label: 'Republican' },
+  { value: 'I', label: 'Independent' },
 ];
 
 export const chamberOptions = [
-  { value: '', label: 'Câmara + Senado' },
-  { value: 'house', label: 'Câmara' },
-  { value: 'senate', label: 'Senado' },
+  { value: '', label: 'House + Senate' },
+  { value: 'house', label: 'House' },
+  { value: 'senate', label: 'Senate' },
 ];

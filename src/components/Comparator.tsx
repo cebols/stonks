@@ -64,7 +64,7 @@ export default function Comparator({
         <input
           type="text"
           value={q}
-          placeholder="Buscar político para adicionar…"
+          placeholder="Search a politician to add…"
           onChange={(e) => setQ(e.target.value)}
           style={{ minWidth: 280 }}
         />
@@ -80,25 +80,25 @@ export default function Comparator({
                 style={{ display: 'block', width: '100%', textAlign: 'left', border: 0, borderRadius: 0 }}
                 onClick={() => add(p.id)}
               >
-                {p.full_name} <span className="muted">· {p.scored_trades} pontuadas</span>
+                {p.full_name} <span className="muted">· {p.scored_trades} scored</span>
               </button>
             ))}
           </div>
         )}
         {ids.length > 0 && (
-          <button className="btn" style={{ marginLeft: 8 }} onClick={() => setIds(initialIds)}>Limpar</button>
+          <button className="btn" style={{ marginLeft: 8 }} onClick={() => setIds(initialIds)}>Clear</button>
         )}
       </div>
 
       {selected.length === 0 ? (
-        <p className="muted">Busque e adicione políticos para comparar.</p>
+        <p className="muted">Search and add politicians to compare.</p>
       ) : (
         <>
           <table>
             <thead>
               <tr>
-                <th>Político</th><th>Trades</th><th>Ações</th><th>Pontuadas</th>
-                <th>Alpha méd.</th><th>Win rate</th><th>Delay méd.</th><th></th>
+                <th>Politician</th><th>Trades</th><th>Stocks</th><th>Scored</th>
+                <th>Avg alpha</th><th>Win rate</th><th>Avg delay</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -118,12 +118,12 @@ export default function Comparator({
           </table>
 
           <div className="chartbox" style={{ marginTop: 16 }}>
-            <h3>Retorno acumulado das compras vs S&P vs CDI</h3>
+            <h3>Cumulative return of purchases vs S&P vs CDI</h3>
             <div className="toolbar" style={{ margin: '0 0 8px' }}>
               <RangeSelect value={range} onChange={setRange} />
             </div>
             {curve.length < 2 ? (
-              <p className="muted">Carregando / dados insuficientes para a curva.</p>
+              <p className="muted">Loading / not enough data for the curve.</p>
             ) : (
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={curve} margin={{ left: 8, right: 16 }}>
@@ -146,7 +146,7 @@ export default function Comparator({
           {selected.length >= 2 && (
             <div className="grid2" style={{ marginTop: 16 }}>
               <div className="chartbox">
-                <h3>Alpha médio vs benchmark</h3>
+                <h3>Average alpha vs benchmark</h3>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={alphaData} margin={{ left: 8, right: 16 }}>
                     <XAxis dataKey="name" tick={axis} tickFormatter={shortName} />

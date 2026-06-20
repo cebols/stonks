@@ -56,7 +56,7 @@ export default async function StockPage({ params }: { params: { ticker: string }
 
   return (
     <>
-      <p style={{ margin: '0 0 4px' }}><Link href="/stocks" className="muted">← Ações</Link></p>
+      <p style={{ margin: '0 0 4px' }}><Link href="/stocks" className="muted">← Stocks</Link></p>
       <h2 style={{ marginTop: 0 }}>
         <span className="mono">{summary.ticker}</span>
         {summary.asset_description && (
@@ -66,12 +66,12 @@ export default async function StockPage({ params }: { params: { ticker: string }
 
       <div className="cards">
         <div className="card"><div className="val">{summary.trade_count}</div><div className="lbl">trades</div></div>
-        <div className="card"><div className="val">{summary.filer_count}</div><div className="lbl">políticos</div></div>
-        <div className="card"><div className="val buy">{summary.purchases}</div><div className="lbl">compras · {fmtMoney(summary.buy_volume)}</div></div>
-        <div className="card"><div className="val sell">{summary.sales}</div><div className="lbl">vendas · {fmtMoney(summary.sell_volume)}</div></div>
+        <div className="card"><div className="val">{summary.filer_count}</div><div className="lbl">politicians</div></div>
+        <div className="card"><div className="val buy">{summary.purchases}</div><div className="lbl">buys · {fmtMoney(summary.buy_volume)}</div></div>
+        <div className="card"><div className="val sell">{summary.sales}</div><div className="lbl">sells · {fmtMoney(summary.sell_volume)}</div></div>
         <div className="card">
           <div className={`val ${pctClass(summary.avg_alpha)}`}>{fmtPct(summary.avg_alpha)}</div>
-          <div className="lbl">alpha médio ({summary.scored_trades} pontuadas)</div>
+          <div className="lbl">avg alpha ({summary.scored_trades} scored)</div>
         </div>
         <div className="card">
           <div className="val">{summary.win_rate != null ? `${summary.win_rate}%` : '—'}</div>
@@ -88,19 +88,19 @@ export default async function StockPage({ params }: { params: { ticker: string }
         if (!oldest) return null;
         return (
           <div className="chartbox">
-            <h3>Resultado desde a compra mais antiga por um político ({oldest.transaction_date})</h3>
+            <h3>Result since the earliest purchase by a politician ({oldest.transaction_date})</h3>
             <div className="cards">
               <div className="card">
                 <div className={`val ${pctClass(oldest.return_pct)}`}>{fmtPct(oldest.return_pct)}</div>
-                <div className="lbl">retorno do ativo</div>
+                <div className="lbl">asset return</div>
               </div>
               <div className="card">
                 <div className={`val ${pctClass(oldest.benchmark_return_pct)}`}>{fmtPct(oldest.benchmark_return_pct)}</div>
-                <div className="lbl">S&P no período</div>
+                <div className="lbl">S&P over the period</div>
               </div>
               <div className="card">
                 <div className={`val ${pctClass(oldest.cdi_return_pct)}`}>{fmtPct(oldest.cdi_return_pct)}</div>
-                <div className="lbl">CDI no período</div>
+                <div className="lbl">CDI over the period</div>
               </div>
             </div>
           </div>
@@ -110,10 +110,10 @@ export default async function StockPage({ params }: { params: { ticker: string }
       <StockCharts trades={chartTrades} />
       <PerformanceCurve trades={perfTrades} showCategoryFilter={false} />
 
-      <h2>Trades neste ativo</h2>
+      <h2>Trades in this asset</h2>
       <table>
         <thead>
-          <tr><th>Político</th><th>Tipo</th><th>Valor</th><th>Data trade</th><th>Preço</th><th>Resultado</th></tr>
+          <tr><th>Politician</th><th>Type</th><th>Amount</th><th>Trade date</th><th>Price</th><th>Result</th></tr>
         </thead>
         <tbody>
           {trades.map((t) => {
@@ -125,14 +125,14 @@ export default async function StockPage({ params }: { params: { ticker: string }
                   <Link href={`/politicians/${t.politician_id}`}>{t.politician?.full_name ?? t.politician_id}</Link>
                 </td>
                 <td className={t.tx_type === 'purchase' ? 'buy' : t.tx_type === 'sale' ? 'sell' : ''}>
-                  {t.tx_type === 'purchase' ? 'Compra' : t.tx_type === 'sale' ? 'Venda' : t.tx_type ?? '—'}
+                  {t.tx_type === 'purchase' ? 'Buy' : t.tx_type === 'sale' ? 'Sell' : t.tx_type ?? '—'}
                 </td>
                 <td className="mono">{fmtAmount(t.amount_min, t.amount_max)}</td>
                 <td className="mono">{fmtDate(t.transaction_date)}</td>
                 <td className="mono">{pr?.entry_price != null ? `$${pr.entry_price.toFixed(2)}` : '—'}</td>
                 <td className={`mono ${pctClass(result)}`}>
                   {result != null
-                    ? <>{fmtPct(result)} <span className="muted" style={{ fontSize: 10 }}>{t.tx_type === 'sale' ? 'realiz.' : 'aberto'}</span></>
+                    ? <>{fmtPct(result)} <span className="muted" style={{ fontSize: 10 }}>{t.tx_type === 'sale' ? 'realized' : 'open'}</span></>
                     : '—'}
                 </td>
               </tr>

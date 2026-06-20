@@ -20,10 +20,10 @@ export default async function TradesPage() {
   const rows = await getRecentTrades();
   return (
     <>
-      <h2>Trades recentes</h2>
+      <h2>Recent trades</h2>
       <p className="muted">
-        Últimas {rows.length} transações divulgadas sob o STOCK Act. Filtre por categoria ou tipo,
-        e ordene por qualquer coluna. <strong>Delay</strong> = dias entre a transação e a divulgação.
+        Latest {rows.length} transactions disclosed under the STOCK Act. Filter by category or type,
+        and sort by any column. <strong>Delay</strong> = days between the trade and its disclosure.
       </p>
       <TradesExplorer rows={rows} />
     </>

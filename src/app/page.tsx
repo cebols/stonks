@@ -1,10 +1,9 @@
 import Link from 'next/link';
 import { getSupabase, type PoliticianSummary, type TickerSummary, type Trade, type GlobalStats } from '@/lib/supabase';
-import { fmtPct, pctClass, fmtMoney, fmtAmount } from '@/lib/format';
+import { fmtPct, pctClass, fmtMoney } from '@/lib/format';
+import RecentTradesTable, { type RecentRow } from '@/components/RecentTradesTable';
 
 export const dynamic = 'force-dynamic';
-
-type RecentTrade = Trade & { politician: { full_name: string } | null };
 
 async function getDashboard() {
   const supabase = getSupabase();
@@ -20,8 +19,7 @@ async function getDashboard() {
       .order('avg_alpha', { ascending: false, nullsFirst: false }).limit(8),
     supabase.from('trades').select('*, politician:politicians(full_name)')
       .not('ticker', 'is', null)
-      .order('transaction_date', { ascending: false, nullsFirst: false }).limit(10),
-    // compras (stock) dos últimos 90 dias, para "em alta".
+      .order('transaction_date', { ascending: false, nullsFirst: false }).limit(12),
     supabase.from('trades').select('ticker, politician_id, transaction_date, tx_type')
       .eq('tx_type', 'purchase').not('ticker', 'is', null)
       .gte('transaction_date', since90).limit(1000),
@@ -30,7 +28,6 @@ async function getDashboard() {
       .order('net_volume', { ascending: false, nullsFirst: false }).limit(8),
   ]);
 
-  // "Em alta": tickers com mais políticos distintos comprando em 90 dias.
   const buyers = new Map<string, Set<string>>();
   for (const t of (recentBuys.data ?? []) as { ticker: string; politician_id: string }[]) {
     if (!buyers.has(t.ticker)) buyers.set(t.ticker, new Set());
@@ -44,7 +41,7 @@ async function getDashboard() {
     topPols: (topPols.data ?? []) as PoliticianSummary[],
     mostBought: (mostBought.data ?? []) as TickerSummary[],
     bestStocks: (bestStocks.data ?? []) as TickerSummary[],
-    recent: (recent.data ?? []) as unknown as RecentTrade[],
+    recent: (recent.data ?? []) as unknown as RecentRow[],
     hot,
     stats: stats.data as GlobalStats | null,
     netFlow: (netFlow.data ?? []) as TickerSummary[],
@@ -71,27 +68,27 @@ export default async function HomePage() {
 
   return (
     <>
-      <h2>Visão geral</h2>
+      <h2>Overview</h2>
       {empty && (
         <p className="muted">
-          Sem dados agregados ainda — rode o <code>schema.sql</code> no Supabase para criar as views.
+          No aggregated data yet — run <code>schema.sql</code> in Supabase to create the views.
         </p>
       )}
 
       {stats && (
         <div className="cards" style={{ marginBottom: 16 }}>
-          <div className="card"><div className="val">{stats.total_trades.toLocaleString('pt-BR')}</div><div className="lbl">trades rastreadas</div></div>
-          <div className="card"><div className="val">{stats.trades_30d}</div><div className="lbl">trades (últimos 30d)</div></div>
-          <div className="card"><div className="val">{stats.politicians}</div><div className="lbl">políticos</div></div>
-          <div className="card"><div className="val">{stats.stocks}</div><div className="lbl">ações distintas</div></div>
-          <div className="card"><div className="val">{fmtMoney(stats.total_volume)}</div><div className="lbl">volume estimado</div></div>
-          <div className="card"><div className="val">{stats.avg_delay != null ? `${stats.avg_delay}d` : '—'}</div><div className="lbl">delay médio</div></div>
+          <div className="card"><div className="val">{stats.total_trades.toLocaleString('en-US')}</div><div className="lbl">trades tracked</div></div>
+          <div className="card"><div className="val">{stats.trades_30d}</div><div className="lbl">trades (last 30d)</div></div>
+          <div className="card"><div className="val">{stats.politicians}</div><div className="lbl">politicians</div></div>
+          <div className="card"><div className="val">{stats.stocks}</div><div className="lbl">distinct stocks</div></div>
+          <div className="card"><div className="val">{fmtMoney(stats.total_volume)}</div><div className="lbl">est. volume</div></div>
+          <div className="card"><div className="val">{stats.avg_delay != null ? `${stats.avg_delay}d` : '—'}</div><div className="lbl">avg delay</div></div>
         </div>
       )}
 
       <div className="grid2">
         <div className="chartbox">
-          <h3>🏆 Políticos pra seguir (maior alpha, mín. 10 pontuadas)</h3>
+          <h3>🏆 Politicians to follow (top alpha, min. 10 scored)</h3>
           <table>
             <tbody>
               {topPols.map((p) => (
@@ -103,29 +100,29 @@ export default async function HomePage() {
               ))}
             </tbody>
           </table>
-          <p style={{ margin: '8px 0 0' }}><Link href="/leaderboard" className="muted">Ver leaderboard completo →</Link></p>
+          <p style={{ margin: '8px 0 0' }}><Link href="/leaderboard" className="muted">See full leaderboard →</Link></p>
         </div>
 
         <div className="chartbox">
-          <h3>🔥 Ações mais compradas (volume estimado)</h3>
+          <h3>🔥 Most bought stocks (est. volume)</h3>
           <table><tbody>{mostBought.map((s) => <TickerRow key={s.ticker} s={s} metric="buy" />)}</tbody></table>
-          <p style={{ margin: '8px 0 0' }}><Link href="/stocks" className="muted">Ver todas as ações →</Link></p>
+          <p style={{ margin: '8px 0 0' }}><Link href="/stocks" className="muted">See all stocks →</Link></p>
         </div>
 
         <div className="chartbox">
-          <h3>📈 Ações de melhor resultado (alpha méd., mín. 5 políticos)</h3>
+          <h3>📈 Best-performing stocks (avg alpha, min. 5 politicians)</h3>
           <table><tbody>{bestStocks.map((s) => <TickerRow key={s.ticker} s={s} metric="alpha" />)}</tbody></table>
         </div>
 
         <div className="chartbox">
-          <h3>🚀 Em alta — mais comprados nos últimos 90 dias</h3>
-          {hot.length === 0 ? <p className="muted">Sem compras recentes.</p> : (
+          <h3>🚀 Trending — most bought in the last 90 days</h3>
+          {hot.length === 0 ? <p className="muted">No recent buys.</p> : (
             <table>
               <tbody>
                 {hot.map((h) => (
                   <tr key={h.ticker}>
                     <td className="mono"><Link href={`/stocks/${h.ticker}`}>{h.ticker}</Link></td>
-                    <td className="mono" style={{ textAlign: 'right' }}>{h.n} políticos comprando</td>
+                    <td className="mono" style={{ textAlign: 'right' }}>{h.n} politicians buying</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,7 +131,7 @@ export default async function HomePage() {
         </div>
 
         <div className="chartbox">
-          <h3>💸 Maior fluxo líquido de compra (compras − vendas, all-time)</h3>
+          <h3>💸 Largest net buying (buys − sells, all-time)</h3>
           <table>
             <tbody>
               {netFlow.map((s) => (
@@ -146,30 +143,13 @@ export default async function HomePage() {
               ))}
             </tbody>
           </table>
-          <p style={{ margin: '8px 0 0' }}><Link href="/signals" className="muted">Ver sinais (cluster buys, smart money) →</Link></p>
+          <p style={{ margin: '8px 0 0' }}><Link href="/signals" className="muted">See signals (cluster buys, smart money) →</Link></p>
         </div>
 
         <div className="chartbox" style={{ gridColumn: '1 / -1' }}>
-          <h3>🕒 Trades recentes</h3>
-          <table>
-            <thead>
-              <tr><th>Ticker</th><th>Tipo</th><th>Político</th><th style={{ textAlign: 'right' }}>Valor</th><th style={{ textAlign: 'right' }}>Delay</th></tr>
-            </thead>
-            <tbody>
-              {recent.map((t) => (
-                <tr key={t.id}>
-                  <td className="mono"><Link href={`/stocks/${t.ticker}`}>{t.ticker}</Link></td>
-                  <td className={t.tx_type === 'purchase' ? 'buy' : 'sell'}>
-                    {t.tx_type === 'purchase' ? 'Compra' : 'Venda'}
-                  </td>
-                  <td><Link href={`/politicians/${t.politician_id}`}>{t.politician?.full_name}</Link></td>
-                  <td className="mono" style={{ textAlign: 'right' }}>{fmtAmount(t.amount_min, t.amount_max)}</td>
-                  <td className="mono" style={{ textAlign: 'right' }}>{t.disclosure_delay_days != null ? `${t.disclosure_delay_days}d` : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p style={{ margin: '8px 0 0' }}><Link href="/trades" className="muted">Ver todas as trades →</Link></p>
+          <h3>🕒 Recent trades</h3>
+          <RecentTradesTable rows={recent} />
+          <p style={{ margin: '8px 0 0' }}><Link href="/trades" className="muted">See all trades →</Link></p>
         </div>
       </div>
     </>

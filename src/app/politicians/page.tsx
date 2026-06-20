@@ -19,10 +19,10 @@ export default async function PoliticiansPage() {
   const rows = await getPoliticians();
   return (
     <>
-      <h2>Políticos</h2>
+      <h2>Politicians</h2>
       <p className="muted">
-        Filtre e ordene por volume de trades, alpha médio ou win rate. Clique num nome para ver a
-        carteira e o histórico. <a href="/compare">Comparar políticos →</a>
+        Filter and sort by trade volume, average alpha or win rate. Click a name to see the
+        portfolio and history. <a href="/compare">Compare politicians →</a>
       </p>
       <PoliticiansExplorer rows={rows} />
     </>

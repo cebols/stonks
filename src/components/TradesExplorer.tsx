@@ -56,24 +56,24 @@ export default function TradesExplorer({
 
   return (
     <>
-      <Toolbar count={`${filtered.length} de ${rows.length} trades`}>
-        <TextFilter value={q} onChange={setQ} placeholder="Buscar político, ticker, ativo…" />
+      <Toolbar count={`${filtered.length} of ${rows.length} trades`}>
+        <TextFilter value={q} onChange={setQ} placeholder="Search politician, ticker, asset…" />
         <Segmented
           value={cat}
           onChange={setCat}
           options={[
-            { value: 'stock', label: 'Ações' },
-            { value: 'fund', label: 'Fundos' },
-            { value: 'other', label: 'Outros' },
-            { value: 'all', label: 'Todos' },
+            { value: 'stock', label: 'Stocks' },
+            { value: 'fund', label: 'Funds' },
+            { value: 'other', label: 'Other' },
+            { value: 'all', label: 'All' },
           ]}
         />
         <SelectFilter
           label="" value={tx} onChange={setTx}
           options={[
-            { value: '', label: 'Compra + Venda' },
-            { value: 'purchase', label: 'Compras' },
-            { value: 'sale', label: 'Vendas' },
+            { value: '', label: 'Buy + Sell' },
+            { value: 'purchase', label: 'Buys' },
+            { value: 'sale', label: 'Sells' },
           ]}
         />
       </Toolbar>
@@ -81,15 +81,15 @@ export default function TradesExplorer({
       <table>
         <thead>
           <tr>
-            {!hidePolitician && <SortTh label="Político" col="politician" sort={sort} setSort={setSort} />}
+            {!hidePolitician && <SortTh label="Politician" col="politician" sort={sort} setSort={setSort} />}
             <SortTh label="Ticker" col="ticker" sort={sort} setSort={setSort} />
-            <SortTh label="Tipo" col="tx_type" sort={sort} setSort={setSort} />
-            <SortTh label="Valor" col="amount" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Data trade" col="transaction_date" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Divulgado" col="disclosure_date" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Type" col="tx_type" sort={sort} setSort={setSort} />
+            <SortTh label="Amount" col="amount" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Trade date" col="transaction_date" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Disclosed" col="disclosure_date" sort={sort} setSort={setSort} numeric />
             <SortTh label="Delay" col="disclosure_delay_days" sort={sort} setSort={setSort} numeric />
-            {hasPrices && <SortTh label="Preço" col="entry" sort={sort} setSort={setSort} numeric />}
-            {hasPrices && <SortTh label="Resultado" col="result" sort={sort} setSort={setSort} numeric />}
+            {hasPrices && <SortTh label="Price" col="entry" sort={sort} setSort={setSort} numeric />}
+            {hasPrices && <SortTh label="Result" col="result" sort={sort} setSort={setSort} numeric />}
           </tr>
         </thead>
         <tbody>
@@ -108,7 +108,7 @@ export default function TradesExplorer({
                   : <span className="muted">{t.asset_description?.slice(0, 22) ?? '—'}</span>}
               </td>
               <td className={t.tx_type === 'purchase' ? 'buy' : t.tx_type === 'sale' ? 'sell' : ''}>
-                {t.tx_type === 'purchase' ? 'Compra' : t.tx_type === 'sale' ? 'Venda' : t.tx_type ?? '—'}
+                {t.tx_type === 'purchase' ? 'Buy' : t.tx_type === 'sale' ? 'Sell' : t.tx_type ?? '—'}
               </td>
               <td className="mono">{fmtAmount(t.amount_min, t.amount_max)}</td>
               <td className="mono">{fmtDate(t.transaction_date)}</td>
@@ -118,7 +118,7 @@ export default function TradesExplorer({
               {hasPrices && (
                 <td className={`mono ${pctClass(t._result)}`}>
                   {t._result != null
-                    ? <>{fmtPct(t._result)} <span className="muted" style={{ fontSize: 10 }}>{t.tx_type === 'sale' ? 'realiz.' : 'aberto'}</span></>
+                    ? <>{fmtPct(t._result)} <span className="muted" style={{ fontSize: 10 }}>{t.tx_type === 'sale' ? 'realized' : 'open'}</span></>
                     : '—'}
                 </td>
               )}
@@ -126,7 +126,7 @@ export default function TradesExplorer({
           ))}
         </tbody>
       </table>
-      {filtered.length === 0 && <p className="muted">Nenhuma trade com esses filtros.</p>}
+      {filtered.length === 0 && <p className="muted">No trades match these filters.</p>}
     </>
   );
 }

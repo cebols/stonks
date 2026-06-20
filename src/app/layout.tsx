@@ -4,12 +4,12 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Stonks — Congress Trades',
-  description: 'Trades de ações do Congresso e Senado dos EUA, com track record (win rate / alpha vs S&P).',
+  description: 'US Congress & Senate stock trades, with track record (win rate / alpha vs S&P).',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="en">
       <body>
         <header className="site">
           <div className="inner">
@@ -17,11 +17,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
               <Link href="/">Home</Link>
               <Link href="/trades">Trades</Link>
-              <Link href="/stocks">Ações</Link>
-              <Link href="/signals">Sinais</Link>
-              <Link href="/politicians">Políticos</Link>
+              <Link href="/stocks">Stocks</Link>
+              <Link href="/signals">Signals</Link>
+              <Link href="/politicians">Politicians</Link>
               <Link href="/leaderboard">Leaderboard</Link>
-              <Link href="/compare">Comparar</Link>
+              <Link href="/compare">Compare</Link>
             </nav>
           </div>
         </header>

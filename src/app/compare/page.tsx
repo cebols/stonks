@@ -20,10 +20,10 @@ export default async function ComparePage() {
   const politicians = await getPoliticians();
   return (
     <>
-      <h2>Comparador de políticos</h2>
+      <h2>Compare politicians</h2>
       <p className="muted">
-        Compare lado a lado o track record (alpha, win rate, delay) de quaisquer políticos.
-        Adicione pelo menos dois.
+        Compare side by side the track record (alpha, win rate, delay) of any politicians.
+        Add at least two.
       </p>
       <Comparator politicians={politicians} />
     </>

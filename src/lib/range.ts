@@ -10,7 +10,7 @@ export const RANGE_OPTIONS: { value: Range; label: string }[] = [
   { value: '180', label: '180d' },
   { value: '360', label: '360d' },
   { value: 'ytd', label: 'YTD' },
-  { value: 'all', label: 'Tudo' },
+  { value: 'all', label: 'All' },
 ];
 
 // Data de corte (YYYY-MM-DD) ou null para "tudo".

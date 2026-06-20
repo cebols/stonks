@@ -29,10 +29,10 @@ export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
 
   return (
     <>
-      <Toolbar count={`${filtered.length} de ${rows.length} ações`}>
-        <TextFilter value={q} onChange={setQ} placeholder="Buscar ticker ou empresa…" />
+      <Toolbar count={`${filtered.length} of ${rows.length} stocks`}>
+        <TextFilter value={q} onChange={setQ} placeholder="Search ticker or company…" />
         <SelectFilter
-          label="Mín. políticos" value={minFilers} onChange={setMinFilers}
+          label="Min. politicians" value={minFilers} onChange={setMinFilers}
           options={[
             { value: '1', label: '1+' }, { value: '3', label: '3+' },
             { value: '5', label: '5+' }, { value: '10', label: '10+' },
@@ -45,13 +45,13 @@ export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
           <tr>
             <SortTh label="Ticker" col="ticker" sort={sort} setSort={setSort} />
             <SortTh label="Trades" col="trade_count" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Políticos" col="filer_count" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Compras" col="purchases" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Vendas" col="sales" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Vol. compra" col="buy_volume" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Vol. venda" col="sell_volume" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Fluxo líq." col="net_volume" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Alpha méd." col="avg_alpha" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Politicians" col="filer_count" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Buys" col="purchases" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Sells" col="sales" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Buy vol." col="buy_volume" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Sell vol." col="sell_volume" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Net flow" col="net_volume" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Avg alpha" col="avg_alpha" sort={sort} setSort={setSort} numeric />
             <SortTh label="Win rate" col="win_rate" sort={sort} setSort={setSort} numeric />
           </tr>
         </thead>
@@ -74,7 +74,7 @@ export default function StocksExplorer({ rows }: { rows: TickerSummary[] }) {
           ))}
         </tbody>
       </table>
-      {filtered.length === 0 && <p className="muted">Nenhuma ação com esses filtros.</p>}
+      {filtered.length === 0 && <p className="muted">No stocks match these filters.</p>}
     </>
   );
 }

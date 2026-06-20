@@ -20,11 +20,11 @@ export default async function StocksPage() {
   const rows = await getTickers();
   return (
     <>
-      <h2>Ações</h2>
+      <h2>Stocks</h2>
       <p className="muted">
-        Volume estimado de compra/venda por ação, quantos políticos negociaram, e o desempenho
-        agregado (alpha/win rate). Ordene por <strong>Vol. compra</strong> para ver as mais compradas,
-        ou por <strong>Alpha méd.</strong> (com mín. de políticos) para as de melhor resultado.
+        Estimated buy/sell volume per stock, how many politicians traded it, and aggregate
+        performance (alpha/win rate). Sort by <strong>Buy vol.</strong> to see the most bought, or by
+        <strong> Avg alpha</strong> (with a min. number of politicians) for the best performers.
       </p>
       <StocksExplorer rows={rows} />
     </>

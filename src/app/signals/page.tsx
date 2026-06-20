@@ -24,11 +24,11 @@ export default async function SignalsPage() {
   const { trades, summaries } = await getData();
   return (
     <>
-      <h2>Sinais</h2>
+      <h2>Signals</h2>
       <p className="muted">
-        Sinais de decisão a partir das trades recentes. Filtre por janela, mínimo de políticos e
-        <strong> comitê</strong> (ex: ver compras de quem está em Armed Services). Use como ponto de
-        partida de pesquisa, não gatilho de compra.
+        Decision signals from recent trades. Filter by window, minimum politicians and
+        <strong> committee</strong> (e.g. see buys from Armed Services members). Use as a research
+        starting point, not a buy trigger.
       </p>
       <Signals trades={trades} summaries={summaries} />
     </>

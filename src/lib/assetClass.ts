@@ -17,9 +17,9 @@ export function assetClass(assetType: string | null, ticker: string | null): Ass
 }
 
 export const CATEGORY_LABELS: Record<AssetClass, string> = {
-  stock: 'Ações',
-  fund: 'Fundos',
-  other: 'Outros',
+  stock: 'Stocks',
+  fund: 'Funds',
+  other: 'Other',
 };
 
 // midpoint da faixa de valor (estimativa de volume por trade).

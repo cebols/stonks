@@ -25,18 +25,18 @@ export default function PoliticiansExplorer({
 
   return (
     <>
-      <Toolbar count={`${filtered.length} de ${rows.length} políticos`}>
-        <TextFilter value={q} onChange={setQ} placeholder="Buscar nome…" />
+      <Toolbar count={`${filtered.length} of ${rows.length} politicians`}>
+        <TextFilter value={q} onChange={setQ} placeholder="Search name…" />
       </Toolbar>
       <table>
         <thead>
           <tr>
-            <SortTh label="Nome" col="full_name" sort={sort} setSort={setSort} />
+            <SortTh label="Name" col="full_name" sort={sort} setSort={setSort} />
             <SortTh label="Trades" col="total_trades" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Ações" col="stock_trades" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Alpha méd." col="avg_alpha" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Stocks" col="stock_trades" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Avg alpha" col="avg_alpha" sort={sort} setSort={setSort} numeric />
             <SortTh label="Win rate" col="win_rate" sort={sort} setSort={setSort} numeric />
-            <SortTh label="Última trade" col="last_traded" sort={sort} setSort={setSort} numeric />
+            <SortTh label="Last trade" col="last_traded" sort={sort} setSort={setSort} numeric />
           </tr>
         </thead>
         <tbody>
@@ -52,7 +52,7 @@ export default function PoliticiansExplorer({
           ))}
         </tbody>
       </table>
-      {filtered.length === 0 && <p className="muted">Nenhum político com esses filtros.</p>}
+      {filtered.length === 0 && <p className="muted">No politicians match these filters.</p>}
     </>
   );
 }
