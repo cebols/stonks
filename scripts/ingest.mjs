@@ -139,21 +139,23 @@ async function main() {
   }
 
   // CDI (Banco Central) por trade: retorno acumulado da data da trade até hoje.
+  let cdiIndex = null;
   try {
-    const cdi = await fetchCDIIndex();
+    cdiIndex = await fetchCDIIndex();
     const dateById = new Map(trades.map((t) => [t.id, t.transaction_date]));
     let n = 0;
     for (const row of perf) {
-      const r = cdiReturnSince(cdi, dateById.get(row.trade_id));
+      const r = cdiReturnSince(cdiIndex, dateById.get(row.trade_id));
       if (r != null) { row.cdi_return_pct = round2(r); n++; }
     }
-    console.log(`→ CDI aplicado a ${n} performances (série BCB com ${cdi.length} pontos).`);
+    console.log(`→ CDI aplicado a ${n} performances (série BCB com ${cdiIndex.length} pontos).`);
   } catch (e) {
     console.warn(`⚠️  CDI indisponível (${e.message}) — seguindo sem CDI.`);
   }
 
   // Preços reais (Yahoo): preço na trade, resultado até hoje, e realizado (FIFO).
   let tradePrices = [];
+  const monthlyPrices = [];
   try {
     const stockTrades = trades.filter((t) =>
       t.ticker && t.transaction_date && (t.tx_type === 'purchase' || t.tx_type === 'sale'));
@@ -201,6 +203,29 @@ async function main() {
     }
     tradePrices = [...priceById.values()].map(({ _ticker, _pol, _date, _type, _entry, ...row }) => row);
     console.log(`→ Preços calculados para ${tradePrices.length} trades.`);
+
+    // Séries MENSAIS (último fechamento de cada mês) por ticker + SPY + CDI,
+    // para a curva de equity. Gravadas na tabela `prices` (ticker, date, close).
+    const monthlyOf = (series) => {
+      const m = new Map();
+      for (const { date, close } of series) m.set(date.slice(0, 7), close); // série asc: último vence
+      return m;
+    };
+    const pushMonthly = (tk, series) => {
+      for (const [month, close] of monthlyOf(series)) {
+        if (close != null) monthlyPrices.push({ ticker: tk, date: `${month}-01`, close: +close.toFixed(4) });
+      }
+    };
+    for (const tk of tickers) {
+      const s = seriesByTicker.get(tk);
+      if (s && s.length) pushMonthly(tk, s);
+    }
+    const spy = await fetchYahooDailyCloses('SPY');
+    if (spy.length) pushMonthly('SPY', spy);
+    if (cdiIndex && cdiIndex.length) {
+      pushMonthly('__CDI__', cdiIndex.map((p) => ({ date: p.date, close: p.cum })));
+    }
+    console.log(`→ Séries mensais: ${monthlyPrices.length} pontos (tickers + SPY + CDI).`);
   } catch (e) {
     console.warn(`⚠️  Cotações indisponíveis (${e.message}) — seguindo sem preços.`);
   }
@@ -214,6 +239,7 @@ async function main() {
   await upsertInChunks(supabase, 'trades', trades, 'id');
   await upsertInChunks(supabase, 'trade_performance', perf, 'trade_id');
   if (tradePrices.length) await upsertInChunks(supabase, 'trade_prices', tradePrices, 'trade_id');
+  if (monthlyPrices.length) await upsertInChunks(supabase, 'prices', monthlyPrices, 'ticker,date');
   console.log('✅ Ingestão concluída.');
 }
 

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabase, type TickerSummary } from '@/lib/supabase';
 import StockCharts, { type StockTrade } from '@/components/StockCharts';
-import PerformanceCurve, { type PerfTrade } from '@/components/PerformanceCurve';
+import PerformanceCurve from '@/components/PerformanceCurve';
 import TradingViewChart from '@/components/TradingViewChart';
 import { fmtAmount, fmtDate, fmtPct, pctClass, fmtMoney } from '@/lib/format';
 
@@ -44,7 +44,7 @@ export default async function StockPage({ params }: { params: { ticker: string }
     tx_type: t.tx_type, amount_min: t.amount_min, amount_max: t.amount_max,
     transaction_date: t.transaction_date, politician_name: t.politician?.full_name ?? t.politician_id,
   }));
-  const perfTrades: PerfTrade[] = trades.map((t) => {
+  const perfTrades = trades.map((t) => {
     const p = Array.isArray(t.perf) ? t.perf[0] : t.perf;
     return {
       ticker: t.ticker, asset_type: t.asset_type, tx_type: t.tx_type,
@@ -108,7 +108,7 @@ export default async function StockPage({ params }: { params: { ticker: string }
       })()}
 
       <StockCharts trades={chartTrades} />
-      <PerformanceCurve trades={perfTrades} showCategoryFilter={false} />
+      <PerformanceCurve ticker={summary.ticker} showCategoryFilter={false} />
 
       <h2>Trades in this asset</h2>
       <table>

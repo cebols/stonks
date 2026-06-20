@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getSupabase, type PoliticianSummary, type Trade } from '@/lib/supabase';
 import TradesExplorer, { type TradeRow } from '@/components/TradesExplorer';
 import PortfolioCharts from '@/components/PortfolioCharts';
-import PerformanceCurve, { type PerfTrade } from '@/components/PerformanceCurve';
+import PerformanceCurve from '@/components/PerformanceCurve';
 import Comparator from '@/components/Comparator';
 import { fmtPct, pctClass } from '@/lib/format';
 
@@ -30,23 +30,9 @@ async function getData(id: string) {
   };
 }
 
-function toPerfTrades(trades: TradeWithPerf[]): PerfTrade[] {
-  return trades.map((t) => {
-    const p = Array.isArray(t.perf) ? t.perf[0] : t.perf;
-    return {
-      ticker: t.ticker, asset_type: t.asset_type, tx_type: t.tx_type,
-      transaction_date: t.transaction_date, amount_min: t.amount_min, amount_max: t.amount_max,
-      return_pct: p?.return_pct ?? null,
-      benchmark_return_pct: p?.benchmark_return_pct ?? null,
-      cdi_return_pct: p?.cdi_return_pct ?? null,
-    };
-  });
-}
-
 export default async function PoliticianPage({ params }: { params: { id: string } }) {
   const { summary, trades, all } = await getData(params.id);
   if (!summary) notFound();
-  const perfTrades = toPerfTrades(trades);
 
   return (
     <>
@@ -77,7 +63,7 @@ export default async function PoliticianPage({ params }: { params: { id: string 
 
       <h2>Portfolio</h2>
       <PortfolioCharts trades={trades} />
-      <PerformanceCurve trades={perfTrades} />
+      <PerformanceCurve politicianId={summary.id} />
 
       <h2>Compare with others</h2>
       <Comparator politicians={all} initialIds={[summary.id]} />
