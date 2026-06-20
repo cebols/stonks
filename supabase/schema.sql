@@ -167,7 +167,9 @@ $$;
 
 -- Resumo por político (todas as categorias): inclui TODOS os políticos, com
 -- contagens totais e só-stock, alpha médio e win rate.
-create or replace view politician_summary as
+-- (drop + create: permite mudar a ordem/conjunto de colunas ao re-rodar.)
+drop view if exists politician_summary cascade;
+create view politician_summary as
 select
   p.id, p.full_name, p.chamber, p.party, p.state, p.committees,
   count(t.id)                                                          as total_trades,
@@ -184,7 +186,8 @@ group by p.id, p.full_name, p.chamber, p.party, p.state, p.committees;
 
 -- Resumo por ticker (apenas ações): volume de compra/venda (estimado pelo
 -- midpoint), nº de políticos, e desempenho (alpha/win rate) agregado.
-create or replace view ticker_summary as
+drop view if exists ticker_summary cascade;
+create view ticker_summary as
 select
   t.ticker,
   max(t.asset_description)                                             as asset_description,
