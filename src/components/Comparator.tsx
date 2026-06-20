@@ -6,7 +6,7 @@ import {
   LineChart, Line, Legend, CartesianGrid,
 } from 'recharts';
 import type { PoliticianSummary } from '@/lib/supabase';
-import { fmtPct, pctClass } from '@/lib/format';
+import { fmtPct, pctClass, fmtMonth } from '@/lib/format';
 import { Range } from '@/lib/range';
 import { RangeSelect } from './controls';
 
@@ -128,7 +128,7 @@ export default function Comparator({
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={curve} margin={{ left: 8, right: 16 }}>
                   <CartesianGrid stroke="#1c2230" vertical={false} />
-                  <XAxis dataKey="month" tick={axis} minTickGap={28} />
+                  <XAxis dataKey="month" tick={axis} minTickGap={28} tickFormatter={fmtMonth} />
                   <YAxis tick={axis} tickFormatter={(v) => `${v}%`} />
                   <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v}%`} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />

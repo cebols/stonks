@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { amountMid } from '@/lib/assetClass';
-import { fmtAmount } from '@/lib/format';
+import { fmtAmount, fmtDate } from '@/lib/format';
 import { SortTh, compareBy, Sort } from './controls';
 
 export type RecentRow = {
@@ -47,7 +47,7 @@ export default function RecentTradesTable({ rows }: { rows: RecentRow[] }) {
             <td className={t.tx_type === 'purchase' ? 'buy' : 'sell'}>{t.tx_type === 'purchase' ? 'Buy' : 'Sell'}</td>
             <td><Link href={`/politicians/${t.politician_id}`}>{t.politician?.full_name}</Link></td>
             <td className="mono" style={{ textAlign: 'right' }}>{fmtAmount(t.amount_min, t.amount_max)}</td>
-            <td className="mono" style={{ textAlign: 'right' }}>{t.transaction_date ?? '—'}</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{fmtDate(t.transaction_date)}</td>
             <td className="mono" style={{ textAlign: 'right' }}>{t.disclosure_delay_days != null ? `${t.disclosure_delay_days}d` : '—'}</td>
           </tr>
         ))}

@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { assetClass, amountMid } from '@/lib/assetClass';
-import { fmtMoney } from '@/lib/format';
+import { fmtMoney, fmtDate } from '@/lib/format';
 import { Segmented } from './controls';
 
 export type SignalTrade = {
@@ -239,7 +239,7 @@ export default function Signals({ trades, summaries }: { trades: SignalTrade[]; 
                 <tr key={i}>
                   <td className="mono"><Link href={`/stocks/${t.ticker}`}>{t.ticker}</Link></td>
                   <td><Link href={`/politicians/${t.politician_id}`}>{t.politician?.full_name}</Link></td>
-                  <td className="mono">{t.transaction_date}</td>
+                  <td className="mono">{fmtDate(t.transaction_date)}</td>
                   <td className="mono" style={{ textAlign: 'right' }}>{t.disclosure_delay_days}d</td>
                 </tr>
               ))}

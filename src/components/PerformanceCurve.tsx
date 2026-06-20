@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { assetClass, amountMid, AssetClass } from '@/lib/assetClass';
 import { Range, withinRange } from '@/lib/range';
+import { fmtMonth } from '@/lib/format';
 import { Segmented, RangeSelect } from './controls';
 
 export type PerfTrade = {
@@ -99,7 +100,7 @@ export default function PerformanceCurve({
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ left: 8, right: 16 }}>
             <CartesianGrid stroke="#1c2230" vertical={false} />
-            <XAxis dataKey="month" tick={axis} minTickGap={20} />
+            <XAxis dataKey="month" tick={axis} minTickGap={20} tickFormatter={fmtMonth} />
             <YAxis tick={axis} tickFormatter={(v) => `${v}%`} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v}%`} />
             <Legend wrapperStyle={{ fontSize: 12 }} />

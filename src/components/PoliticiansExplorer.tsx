@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { PoliticianSummary } from '@/lib/supabase';
-import { fmtPct, pctClass } from '@/lib/format';
+import { fmtPct, pctClass, fmtDate } from '@/lib/format';
 import { Toolbar, TextFilter, SortTh, compareBy, Sort } from './controls';
 
 type Col =
@@ -47,7 +47,7 @@ export default function PoliticiansExplorer({
               <td className="mono">{p.stock_trades}</td>
               <td className={`mono ${pctClass(p.avg_alpha)}`}>{fmtPct(p.avg_alpha)}</td>
               <td className="mono">{p.win_rate != null ? `${p.win_rate}%` : '—'}</td>
-              <td className="mono">{p.last_traded ?? '—'}</td>
+              <td className="mono">{fmtDate(p.last_traded)}</td>
             </tr>
           ))}
         </tbody>

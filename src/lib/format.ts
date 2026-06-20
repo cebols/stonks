@@ -1,6 +1,14 @@
+// 'YYYY-MM-DD' -> 'dd/mm/yy'
 export function fmtDate(d: string | null): string {
   if (!d) return '—';
-  return d;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  return m ? `${m[3]}/${m[2]}/${m[1].slice(2)}` : d;
+}
+
+// 'YYYY-MM' -> 'mm/yy' (eixos mensais dos gráficos)
+export function fmtMonth(m: string): string {
+  const x = /^(\d{4})-(\d{2})/.exec(m);
+  return x ? `${x[2]}/${x[1].slice(2)}` : m;
 }
 
 export function fmtAmount(min: number | null, max: number | null): string {

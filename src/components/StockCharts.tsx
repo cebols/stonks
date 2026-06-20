@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { amountMid } from '@/lib/assetClass';
 import { Range, withinRange } from '@/lib/range';
+import { fmtMonth } from '@/lib/format';
 import { RangeSelect } from './controls';
 
 const GREEN = '#3fb950';
@@ -78,7 +79,7 @@ export default function StockCharts({ trades }: { trades: StockTrade[] }) {
         <h3>Buys vs sells by month</h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={byMonth} margin={{ left: 8, right: 16 }}>
-            <XAxis dataKey="month" tick={axis} />
+            <XAxis dataKey="month" tick={axis} tickFormatter={fmtMonth} />
             <YAxis tick={axis} tickFormatter={money} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
             <Legend wrapperStyle={{ fontSize: 12 }} />

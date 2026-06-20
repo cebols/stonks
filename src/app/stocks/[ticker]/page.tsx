@@ -88,7 +88,7 @@ export default async function StockPage({ params }: { params: { ticker: string }
         if (!oldest) return null;
         return (
           <div className="chartbox">
-            <h3>Result since the earliest purchase by a politician ({oldest.transaction_date})</h3>
+            <h3>Result since the earliest purchase by a politician ({fmtDate(oldest.transaction_date)})</h3>
             <div className="cards">
               <div className="card">
                 <div className={`val ${pctClass(oldest.return_pct)}`}>{fmtPct(oldest.return_pct)}</div>

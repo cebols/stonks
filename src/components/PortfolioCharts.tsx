@@ -7,6 +7,7 @@ import {
 import type { Trade } from '@/lib/supabase';
 import { assetClass, amountMid, AssetClass, CATEGORY_LABELS } from '@/lib/assetClass';
 import { Range, withinRange } from '@/lib/range';
+import { fmtMonth } from '@/lib/format';
 import { Segmented, RangeSelect } from './controls';
 
 const GREEN = '#3fb950';
@@ -123,7 +124,7 @@ export default function PortfolioCharts({ trades }: { trades: Trade[] }) {
         {byMonth.length === 0 ? <p className="muted">No data in this category.</p> : (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={byMonth} margin={{ left: 8, right: 16 }}>
-              <XAxis dataKey="month" tick={axis} />
+              <XAxis dataKey="month" tick={axis} tickFormatter={fmtMonth} />
               <YAxis tick={axis} tickFormatter={money} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => money(v)} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
