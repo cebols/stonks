@@ -81,6 +81,22 @@ create table if not exists trade_performance (
 );
 
 -- ---------------------------------------------------------------------------
+-- Preços reais por trade (fechamento diário via Yahoo Finance). Preenchida
+-- pelo ingest. entry_price = fechamento na data da trade (ou pregão anterior).
+-- open_return_pct = resultado de uma COMPRA até hoje.
+-- realized_return_pct = resultado de uma VENDA vs a compra que ela fechou (FIFO).
+-- ---------------------------------------------------------------------------
+create table if not exists trade_prices (
+  trade_id             text primary key references trades (id) on delete cascade,
+  entry_price          numeric,             -- fechamento na data desta trade
+  price_now            numeric,             -- fechamento mais recente do ticker
+  open_return_pct      numeric,             -- compra: (price_now/entry - 1)*100
+  realized_return_pct  numeric,             -- venda: (venda/compra_casada - 1)*100
+  matched_buy_date     date,                -- venda: data da compra casada
+  computed_at          timestamptz not null default now()
+);
+
+-- ---------------------------------------------------------------------------
 -- View de leaderboard: agrega o track record por político.
 -- (win rate e alpha médio de TODAS as trades, não só as vencedoras — a lição
 -- do Khanna: olhe o agregado, não o recorte.)
@@ -108,6 +124,7 @@ alter table politicians       enable row level security;
 alter table trades            enable row level security;
 alter table prices            enable row level security;
 alter table trade_performance enable row level security;
+alter table trade_prices      enable row level security;
 
 do $$
 begin
@@ -122,6 +139,9 @@ begin
   end if;
   if not exists (select 1 from pg_policies where policyname = 'public read trade_performance') then
     create policy "public read trade_performance" on trade_performance for select using (true);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'public read trade_prices') then
+    create policy "public read trade_prices" on trade_prices for select using (true);
   end if;
 end $$;
 

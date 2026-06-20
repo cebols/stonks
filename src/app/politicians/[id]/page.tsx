@@ -18,7 +18,7 @@ async function getData(id: string) {
   const [summary, trades, all] = await Promise.all([
     supabase.from('politician_summary').select('*').eq('id', id).maybeSingle(),
     supabase.from('trades')
-      .select('*, perf:trade_performance(return_pct, benchmark_return_pct, cdi_return_pct)')
+      .select('*, perf:trade_performance(return_pct, benchmark_return_pct, cdi_return_pct), prices:trade_prices(entry_price, price_now, open_return_pct, realized_return_pct, matched_buy_date)')
       .eq('politician_id', id)
       .order('transaction_date', { ascending: false, nullsFirst: false }).limit(2000),
     supabase.from('politician_summary').select('*').gte('scored_trades', 1).order('full_name'),

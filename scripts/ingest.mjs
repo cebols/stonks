@@ -13,7 +13,7 @@
 import {
   getServiceClient, slugify, normalizeTxType, normalizeTicker, toISODate,
   upsertInChunks, fetchJSON, fetchCDIIndex, cdiReturnSince,
-  fetchCommitteesByName, nameKey,
+  fetchCommitteesByName, nameKey, mapPool, fetchYahooDailyCloses, closeOnOrBefore,
 } from './lib.mjs';
 
 const DEFAULT_URL =
@@ -152,6 +152,59 @@ async function main() {
     console.warn(`⚠️  CDI indisponível (${e.message}) — seguindo sem CDI.`);
   }
 
+  // Preços reais (Yahoo): preço na trade, resultado até hoje, e realizado (FIFO).
+  let tradePrices = [];
+  try {
+    const stockTrades = trades.filter((t) =>
+      t.ticker && t.transaction_date && (t.tx_type === 'purchase' || t.tx_type === 'sale'));
+    const tickers = [...new Set(stockTrades.map((t) => t.ticker))];
+    console.log(`→ Buscando cotações (Yahoo) de ${tickers.length} tickers...`);
+    const seriesList = await mapPool(tickers, 8, (tk) => fetchYahooDailyCloses(tk));
+    const seriesByTicker = new Map(tickers.map((tk, i) => [tk, seriesList[i]]));
+    const nowByTicker = new Map(
+      tickers.map((tk, i) => [tk, seriesList[i]?.length ? seriesList[i][seriesList[i].length - 1].close : null]),
+    );
+
+    const priceById = new Map();
+    for (const t of stockTrades) {
+      const series = seriesByTicker.get(t.ticker);
+      if (!series || series.length === 0) continue;
+      const entry = closeOnOrBefore(series, t.transaction_date);
+      const now = nowByTicker.get(t.ticker);
+      if (entry == null) continue;
+      priceById.set(t.id, {
+        trade_id: t.id, entry_price: round2(entry), price_now: round2(now),
+        open_return_pct: t.tx_type === 'purchase' && now != null ? round2((now / entry - 1) * 100) : null,
+        realized_return_pct: null, matched_buy_date: null,
+        _ticker: t.ticker, _pol: t.politician_id, _date: t.transaction_date, _type: t.tx_type, _entry: entry,
+      });
+    }
+
+    // FIFO por (político, ticker): casa cada venda com a compra mais antiga aberta.
+    const groups = new Map();
+    for (const r of priceById.values()) {
+      const k = `${r._pol}|${r._ticker}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    }
+    for (const rows of groups.values()) {
+      rows.sort((a, b) => (a._date < b._date ? -1 : 1));
+      const queue = [];
+      for (const r of rows) {
+        if (r._type === 'purchase') queue.push(r);
+        else if (r._type === 'sale' && queue.length) {
+          const buy = queue.shift();
+          r.realized_return_pct = round2((r._entry / buy._entry - 1) * 100);
+          r.matched_buy_date = buy._date;
+        }
+      }
+    }
+    tradePrices = [...priceById.values()].map(({ _ticker, _pol, _date, _type, _entry, ...row }) => row);
+    console.log(`→ Preços calculados para ${tradePrices.length} trades.`);
+  } catch (e) {
+    console.warn(`⚠️  Cotações indisponíveis (${e.message}) — seguindo sem preços.`);
+  }
+
   const chamberOf = new Map(politicians.map((p) => [p.id, p.chamber]));
   const byChamber = trades.reduce((a, t) => ((a[chamberOf.get(t.politician_id)]++), a), { house: 0, senate: 0 });
 
@@ -160,6 +213,7 @@ async function main() {
   await upsertInChunks(supabase, 'politicians', politicians, 'id');
   await upsertInChunks(supabase, 'trades', trades, 'id');
   await upsertInChunks(supabase, 'trade_performance', perf, 'trade_id');
+  if (tradePrices.length) await upsertInChunks(supabase, 'trade_prices', tradePrices, 'trade_id');
   console.log('✅ Ingestão concluída.');
 }
 

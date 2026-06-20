@@ -3,16 +3,24 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Trade } from '@/lib/supabase';
 import { assetClass, amountMid, AssetClass } from '@/lib/assetClass';
-import { fmtAmount, fmtDate } from '@/lib/format';
+import { fmtAmount, fmtDate, fmtPct, pctClass } from '@/lib/format';
 import {
   Toolbar, TextFilter, SelectFilter, Segmented, SortTh, compareBy, Sort,
 } from './controls';
 
+export type PriceEmbed = {
+  entry_price: number | null; price_now: number | null;
+  open_return_pct: number | null; realized_return_pct: number | null; matched_buy_date: string | null;
+};
 export type TradeRow = Trade & {
   politician: { full_name: string } | null;
+  prices?: PriceEmbed | PriceEmbed[] | null;
 };
 
-type Col = 'politician' | 'ticker' | 'tx_type' | 'amount' | 'transaction_date' | 'disclosure_date' | 'disclosure_delay_days';
+type Col = 'politician' | 'ticker' | 'tx_type' | 'amount' | 'transaction_date'
+  | 'disclosure_date' | 'disclosure_delay_days' | 'entry' | 'result';
+
+const priceOf = (p: TradeRow['prices']): PriceEmbed | null => (Array.isArray(p) ? p[0] ?? null : p ?? null);
 
 export default function TradesExplorer({
   rows, hidePolitician = false,
@@ -22,9 +30,15 @@ export default function TradesExplorer({
   const [cat, setCat] = useState<AssetClass | 'all'>('stock');
   const [sort, setSort] = useState<Sort<Col>>({ key: 'transaction_date', dir: 'desc' });
 
+  const hasPrices = useMemo(() => rows.some((r) => priceOf(r.prices)), [rows]);
+
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    const enriched = rows.map((r) => ({ ...r, _mid: amountMid(r.amount_min, r.amount_max) }));
+    const enriched = rows.map((r) => {
+      const pr = priceOf(r.prices);
+      const result = r.tx_type === 'sale' ? pr?.realized_return_pct ?? null : pr?.open_return_pct ?? null;
+      return { ...r, _mid: amountMid(r.amount_min, r.amount_max), _entry: pr?.entry_price ?? null, _result: result, _matched: pr?.matched_buy_date ?? null };
+    });
     let out = enriched.filter((r) => {
       if (cat !== 'all' && assetClass(r.asset_type, r.ticker) !== cat) return false;
       if (tx && r.tx_type !== tx) return false;
@@ -34,7 +48,8 @@ export default function TradesExplorer({
       }
       return true;
     });
-    const key = sort.key === 'amount' ? '_mid' : sort.key === 'politician' ? '_pol' : sort.key;
+    const map: Partial<Record<Col, string>> = { amount: '_mid', politician: '_pol', entry: '_entry', result: '_result' };
+    const key = map[sort.key] ?? sort.key;
     if (sort.key === 'politician') out = out.map((r) => ({ ...r, _pol: r.politician?.full_name ?? '' }));
     return out.sort(compareBy(key, sort.dir));
   }, [rows, q, tx, cat, sort]);
@@ -73,6 +88,8 @@ export default function TradesExplorer({
             <SortTh label="Data trade" col="transaction_date" sort={sort} setSort={setSort} numeric />
             <SortTh label="Divulgado" col="disclosure_date" sort={sort} setSort={setSort} numeric />
             <SortTh label="Delay" col="disclosure_delay_days" sort={sort} setSort={setSort} numeric />
+            {hasPrices && <SortTh label="Preço" col="entry" sort={sort} setSort={setSort} numeric />}
+            {hasPrices && <SortTh label="Resultado" col="result" sort={sort} setSort={setSort} numeric />}
           </tr>
         </thead>
         <tbody>
@@ -97,6 +114,14 @@ export default function TradesExplorer({
               <td className="mono">{fmtDate(t.transaction_date)}</td>
               <td className="mono">{fmtDate(t.disclosure_date)}</td>
               <td className="mono">{t.disclosure_delay_days != null ? `${t.disclosure_delay_days}d` : '—'}</td>
+              {hasPrices && <td className="mono">{t._entry != null ? `$${t._entry.toFixed(2)}` : '—'}</td>}
+              {hasPrices && (
+                <td className={`mono ${pctClass(t._result)}`}>
+                  {t._result != null
+                    ? <>{fmtPct(t._result)} <span className="muted" style={{ fontSize: 10 }}>{t.tx_type === 'sale' ? 'realiz.' : 'aberto'}</span></>
+                    : '—'}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

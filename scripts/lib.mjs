@@ -91,6 +91,60 @@ export async function fetchJSON(url) {
   return res.json();
 }
 
+// Executa fn sobre items com concorrência limitada.
+export async function mapPool(items, concurrency, fn) {
+  const results = new Array(items.length);
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
+}
+
+// Fechamentos diários de um ticker via Yahoo Finance (grátis, sem chave).
+// Retorna [{ date:'YYYY-MM-DD', close }] em ordem crescente, ou [] se falhar.
+export async function fetchYahooDailyCloses(ticker, startISO = '2012-01-01') {
+  const p1 = Math.floor(new Date(startISO + 'T00:00:00Z').getTime() / 1000);
+  const p2 = Math.floor(Date.now() / 1000);
+  // Yahoo usa '-' no lugar de '.' (ex.: BRK.B -> BRK-B).
+  const symbols = [ticker, ticker.replace(/\./g, '-')].filter((s, i, a) => a.indexOf(s) === i);
+  for (const sym of symbols) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?period1=${p1}&period2=${p2}&interval=1d`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) continue;
+      const j = await res.json();
+      const r = j?.chart?.result?.[0];
+      const ts = r?.timestamp;
+      const cl = r?.indicators?.quote?.[0]?.close;
+      if (!ts || !cl) continue;
+      const out = [];
+      for (let i = 0; i < ts.length; i++) {
+        const c = cl[i];
+        if (c == null) continue;
+        out.push({ date: new Date(ts[i] * 1000).toISOString().slice(0, 10), close: c });
+      }
+      if (out.length) return out;
+    } catch { /* tenta próximo símbolo */ }
+  }
+  return [];
+}
+
+// Último fechamento com date <= alvo (busca binária; série crescente).
+export function closeOnOrBefore(series, targetISO) {
+  if (!series || series.length === 0) return null;
+  let lo = 0, hi = series.length - 1, pos = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (series[mid].date <= targetISO) { pos = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return pos >= 0 ? series[pos].close : series[0].close;
+}
+
 // Normaliza um nome para "primeiro último" (sem acentos/pontuação/sufixos),
 // usado para casar nossos filer_name com a base de legisladores.
 const SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
